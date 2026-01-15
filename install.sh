@@ -54,7 +54,7 @@ if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 else
   echo "TPM already exists. Updating..."
-  cd ~/.tmux/plugins/tpm && git pull origin master
+  (cd ~/.tmux/plugins/tpm && git pull origin master)
 fi
 
 git config --global core.editor 'vim -c "set fenc=utf-8"'
