@@ -63,7 +63,12 @@ git config --global core.editor 'vim -c "set fenc=utf-8"'
 echo "Setting up Claude Code..."
 mkdir -p ~/.claude/output-styles
 ln -sf ~/dotfiles/.claude/settings.json ~/.claude/settings.json
-ln -sf ~/dotfiles/.claude/settings.local.json ~/.claude/settings.local.json
+# settings.local.json contains machine-specific paths, so don't symlink it
+# Instead, copy as template if it doesn't exist
+if [ ! -f ~/.claude/settings.local.json ]; then
+  echo "Creating settings.local.json template (edit paths as needed)..."
+  cp ~/dotfiles/.claude/settings.local.json ~/.claude/settings.local.json
+fi
 ln -sf ~/dotfiles/.claude/statusline.sh ~/.claude/statusline.sh
 chmod +x ~/dotfiles/.claude/statusline.sh
 # Output styles
