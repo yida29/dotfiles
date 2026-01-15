@@ -61,6 +61,21 @@ git config --global core.editor 'vim -c "set fenc=utf-8"'
 
 # Claude Code configuration
 echo "Setting up Claude Code..."
+
+# Install jq (required for statusline.sh)
+if ! command -v jq &> /dev/null; then
+  echo "Installing jq..."
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    brew install jq
+  elif command -v apt &> /dev/null; then
+    sudo apt install -y jq
+  elif command -v yum &> /dev/null; then
+    sudo yum install -y jq
+  else
+    echo "Warning: Could not install jq. Please install it manually for statusline to work."
+  fi
+fi
+
 mkdir -p ~/.claude/output-styles
 ln -sf ~/dotfiles/.claude/settings.json ~/.claude/settings.json
 # settings.local.json contains machine-specific paths, so don't symlink it
