@@ -22,7 +22,10 @@ function cx
    codex --dangerously-bypass-approvals-and-sandbox $argv
 end
 function cop
-  COPILOT_MODEL=gpt-5 copilot --allow-all-tools --banner $argv
+  copilot --allow-all-tools --banner $argv
+end
+function ge
+  gemini --model gemini-3-pro-preview --yolo $argv
 end
 
 # Neovide aliases
@@ -33,3 +36,17 @@ alias nvi='neovide'
 set -gx PATH $PATH /Users/yida/.lmstudio/bin
 # End of LM Studio CLI section
 
+# ghq + fzf で tmux セッションを開く
+function tm
+    set repo (ghq list -p | fzf --preview 'ls -la {}')
+
+    if test -n "$repo"
+        set session_name (basename "$repo" | tr '.' '-')
+
+        if tmux has-session -t "$session_name" 2>/dev/null
+            tmux attach-session -t "$session_name"
+        else
+            tmux new-session -s "$session_name" -c "$repo"
+        end
+    end
+end

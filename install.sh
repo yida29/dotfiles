@@ -58,3 +58,17 @@ else
 fi
 
 git config --global core.editor 'vim -c "set fenc=utf-8"'
+
+# Claude Code configuration
+echo "Setting up Claude Code..."
+mkdir -p ~/.claude/output-styles
+ln -sf ~/dotfiles/.claude/settings.json ~/.claude/settings.json
+ln -sf ~/dotfiles/.claude/settings.local.json ~/.claude/settings.local.json
+ln -sf ~/dotfiles/.claude/statusline.sh ~/.claude/statusline.sh
+chmod +x ~/dotfiles/.claude/statusline.sh
+# Output styles
+for style in ~/dotfiles/.claude/output-styles/*.md; do
+  if [ -f "$style" ]; then
+    ln -sf "$style" ~/.claude/output-styles/
+  fi
+done

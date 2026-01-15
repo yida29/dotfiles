@@ -1,0 +1,1 @@
+/Users/yuto.ida/dotfiles/.ctags.d
