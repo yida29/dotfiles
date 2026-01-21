@@ -4,7 +4,10 @@ ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.ctags ~/.ctags
 ln -sf ~/dotfiles/.ctags.d ~/.ctags.d
 fi
-ln -sf ~/dotfiles/.tmux.conf ~/.tmux.conf
+mkdir -p ~/.config/tmux
+ln -sf ~/dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
+# Remove old ~/.tmux.conf if it's a symlink to avoid confusion
+[ -L ~/.tmux.conf ] && rm ~/.tmux.conf
 mkdir -p ~/.config/fish/functions
 ln -sf ~/dotfiles/fish/config.fish ~/.config/fish/config.fish
 ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_prompt.fish
