@@ -1,9 +1,0 @@
---recurse
---languages=+ALL
---exclude=.git
---exclude=node_modules
---exclude=dist
---exclude=build
---exclude=venv
---fields=+lS
---extras=+q
