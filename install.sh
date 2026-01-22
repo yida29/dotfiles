@@ -87,6 +87,16 @@ if [ ! -f ~/.claude/settings.local.json ]; then
   echo "Creating settings.local.json template (edit paths as needed)..."
   cp ~/dotfiles/.claude/settings.local.json ~/.claude/settings.local.json
 fi
+
+# Continuous-Claude: Set CLAUDE_OPC_DIR with absolute path in settings.local.json
+if [ -d "$HOME/work/Continuous-Claude-v3/opc" ]; then
+  echo "Configuring Continuous-Claude OPC directory..."
+  # Add or update env.CLAUDE_OPC_DIR in settings.local.json
+  tmp_file=$(mktemp)
+  jq --arg opc_dir "$HOME/work/Continuous-Claude-v3/opc" \
+    '.env = (.env // {}) | .env.CLAUDE_OPC_DIR = $opc_dir' \
+    ~/.claude/settings.local.json > "$tmp_file" && mv "$tmp_file" ~/.claude/settings.local.json
+fi
 ln -sf ~/dotfiles/.claude/statusline.sh ~/.claude/statusline.sh
 chmod +x ~/dotfiles/.claude/statusline.sh
 # Output styles
