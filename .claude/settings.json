@@ -8,11 +8,136 @@
     "DISABLE_ERROR_REPORTING": "true",
     "DISABLE_TELEMETRY": "true",
     "DISABLE_AUTOUPDATER": "true",
-    "DISABLE_MICROCOMPACT": "true"
+    "DISABLE_MICROCOMPACT": "true",
+    "CLAUDE_OPC_DIR": "$HOME/.local/share/continuous-claude/opc",
+    "CONTINUOUS_CLAUDE_DB_URL": "postgresql://claude:claude_dev@localhost:5433/continuous_claude"
   },
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh"
   },
-  "alwaysThinkingEnabled": false
+  "alwaysThinkingEnabled": false,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/path-rules.mjs",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/file-claims.mjs",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/edit-context-inject.mjs",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/pre-compact-continuity.mjs"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/persist-project-dir.sh"
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/session-register.mjs",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "resume|compact|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/session-start-continuity.mjs"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/skill-activation-prompt.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/memory-awareness.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/post-edit-diagnostics.mjs",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/handoff-index.mjs"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run $HOME/.claude/hooks/hook_launcher.py auto-handoff-stop"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/session-end-cleanup.mjs"
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dist/session-outcome.mjs"
+          }
+        ]
+      }
+    ]
+  }
 }
