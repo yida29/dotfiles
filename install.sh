@@ -89,11 +89,12 @@ if [ ! -f ~/.claude/settings.local.json ]; then
 fi
 
 # Continuous-Claude: Set CLAUDE_OPC_DIR with absolute path in settings.local.json
-if [ -d "$HOME/work/Continuous-Claude-v3/opc" ]; then
+# XDG compliant location: ~/.local/share/continuous-claude/opc
+if [ -d "$HOME/.local/share/continuous-claude/opc" ]; then
   echo "Configuring Continuous-Claude OPC directory..."
   # Add or update env.CLAUDE_OPC_DIR in settings.local.json
   tmp_file=$(mktemp)
-  jq --arg opc_dir "$HOME/work/Continuous-Claude-v3/opc" \
+  jq --arg opc_dir "$HOME/.local/share/continuous-claude/opc" \
     '.env = (.env // {}) | .env.CLAUDE_OPC_DIR = $opc_dir' \
     ~/.claude/settings.local.json > "$tmp_file" && mv "$tmp_file" ~/.claude/settings.local.json
 fi
