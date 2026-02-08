@@ -75,6 +75,7 @@ if ! command -v fzf &> /dev/null; then
   brew install fzf
 fi
 
+git config --global ghq.root ~/work
 git config --global core.editor 'vim -c "set fenc=utf-8"'
 
 # Claude Code configuration
