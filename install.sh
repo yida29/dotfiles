@@ -4,6 +4,7 @@ ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.ctags ~/.ctags
 ln -sf ~/dotfiles/.ctags.d ~/.ctags.d
 fi
+ln -sf ~/dotfiles/zsh/.zshrc ~/.zshrc
 mkdir -p ~/.config/ghostty
 ln -sf ~/dotfiles/ghostty/config ~/.config/ghostty/config
 mkdir -p ~/.config/tmux
