@@ -63,6 +63,18 @@ else
   (cd ~/.tmux/plugins/tpm && git pull origin master)
 fi
 
+# Install ghq
+if ! command -v ghq &> /dev/null; then
+  echo "Installing ghq..."
+  brew install ghq
+fi
+
+# Install fzf
+if ! command -v fzf &> /dev/null; then
+  echo "Installing fzf..."
+  brew install fzf
+fi
+
 git config --global core.editor 'vim -c "set fenc=utf-8"'
 
 # Claude Code configuration
