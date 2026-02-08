@@ -4,6 +4,8 @@ ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.ctags ~/.ctags
 ln -sf ~/dotfiles/.ctags.d ~/.ctags.d
 fi
+mkdir -p ~/.config/ghostty
+ln -sf ~/dotfiles/ghostty/config ~/.config/ghostty/config
 mkdir -p ~/.config/tmux
 ln -sf ~/dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
 # Also create ~/.tmux.conf symlink for tmux-sensible plugin compatibility
