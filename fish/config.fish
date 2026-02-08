@@ -16,7 +16,7 @@ if test -f ~/.gemini_key
 end
 
 function cc
-  claude --dangerously-skip-permissions $argv
+  claude --dangerously-skip-permissions --resume $argv
 end
 function cx
    codex --dangerously-bypass-approvals-and-sandbox $argv

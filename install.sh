@@ -75,6 +75,12 @@ if ! command -v fzf &> /dev/null; then
   brew install fzf
 fi
 
+# Install delta (git pager for lazygit & git diff)
+if ! command -v delta &> /dev/null; then
+  echo "Installing delta..."
+  brew install git-delta
+fi
+
 git config --global ghq.root ~/work
 git config --global core.editor 'vim -c "set fenc=utf-8"'
 

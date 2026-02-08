@@ -1,9 +1,10 @@
 {
-  "env": {
-  },
+  "env": {},
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh"
   },
-  "alwaysThinkingEnabled": false
+  "enabledPlugins": {
+    "ralph-loop@claude-plugins-official": true
+  }
 }
