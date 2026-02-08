@@ -11,6 +11,8 @@ mkdir -p ~/.config/tmux
 ln -sf ~/dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
 # Also create ~/.tmux.conf symlink for tmux-sensible plugin compatibility
 ln -sf ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
+mkdir -p "$HOME/Library/Application Support/lazygit"
+ln -sf ~/dotfiles/lazygit/config.yml "$HOME/Library/Application Support/lazygit/config.yml"
 mkdir -p ~/.config/fish/functions
 ln -sf ~/dotfiles/fish/config.fish ~/.config/fish/config.fish
 ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_prompt.fish

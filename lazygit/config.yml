@@ -1,0 +1,17 @@
+os:
+  edit: "nvim {{filename}}"
+  editAtLine: "nvim +{{line}} {{filename}}"
+  editAtLineAndWait: "nvim +{{line}} {{filename}}"
+  editInTerminal: true
+gui:
+  nerdFontsVersion: "3"
+  sidePanelWidth: 0.3
+  showBranchCommitHash: true
+git:
+  autoFetch: true
+  autoFetchInterval: 60
+  pagers:
+    - colorArg: always
+      pager: "delta --dark --paging=never"
+# nvim に戻るとき「Press enter to return」を出さない
+promptToReturnFromSubprocess: false
