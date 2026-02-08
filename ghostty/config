@@ -45,9 +45,9 @@ keybind = ctrl+a>l=goto_split:right
 # 新しいタブ: tmux の c に対応
 keybind = ctrl+a>c=new_tab
 
-# タブ移動: tmux の Ctrl-h/Ctrl-l に対応
-keybind = ctrl+a>ctrl+h=previous_tab
-keybind = ctrl+a>ctrl+l=next_tab
+# タブ移動: tmux の n/p に対応
+keybind = ctrl+a>n=next_tab
+keybind = ctrl+a>p=previous_tab
 
 # ペインを閉じる
 keybind = ctrl+a>x=close_surface
