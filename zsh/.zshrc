@@ -44,3 +44,8 @@ function repo() {
 
 # マシン固有の設定（APIキー等）
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
+# Added by LM Studio CLI (lms)
+export PATH="$PATH:/Users/yida/.lmstudio/bin"
+# End of LM Studio CLI section
+
