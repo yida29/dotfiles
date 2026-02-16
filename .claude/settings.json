@@ -8,5 +8,6 @@
     "ralph-loop@claude-plugins-official": true,
     "supabase@claude-plugins-official": true
   },
-  "alwaysThinkingEnabled": false
+  "alwaysThinkingEnabled": false,
+  "skipDangerousModePermissionPrompt": true
 }

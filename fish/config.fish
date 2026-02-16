@@ -22,7 +22,7 @@ function cx
    codex --dangerously-bypass-approvals-and-sandbox $argv
 end
 function cop
-  COPILOT_MODEL=gpt-5 copilot --allow-all-tools --banner $argv
+  COPILOT_MODEL=gpt-5.2 copilot --allow-all-tools --banner $argv
 end
 function ge
   gemini --model gemini-3-pro --yolo $argv
