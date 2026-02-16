@@ -1,5 +1,5 @@
 # シェル
-command = /opt/homebrew/bin/fish
+command = /bin/zsh
 
 # フォント
 font-size = 14
