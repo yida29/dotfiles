@@ -14,6 +14,9 @@ end
 if test -f ~/.gemini_key
   set -gx GEMINI_API_KEY (cat ~/.gemini_key)
 end
+if test -f ~/.jira_token
+  set -gx JIRA_API_TOKEN (cat ~/.jira_token)
+end
 
 function cc
   claude --dangerously-skip-permissions --resume $argv
