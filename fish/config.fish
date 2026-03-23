@@ -1,6 +1,6 @@
 set -gx VOLTA_HOME "$HOME/.volta"
 set -gx PATH "$VOLTA_HOME/bin" $PATH
-set -gx PATH $HOME/.claude/local $PATH
+set -gx PATH $HOME/.local/bin $PATH
 set -gx PATH /opt/homebrew/bin $PATH
 fish_add_path /opt/homebrew/opt/postgresql@16/bin
 starship init fish | source
@@ -56,3 +56,31 @@ function devssm
     aws --profile=aws-jse-dev --region=ap-northeast-1 ssm start-session --target $target
 end
 
+
+# ghq + fzf + tmux
+function repo
+  set selected (ghq list --full-path | fzf --preview "ls -la {}")
+  if test -z "$selected"
+    return
+  end
+
+  set session_name (basename "$selected" | tr "." "_")
+  set current_session (tmux display-message -p "#S" 2>/dev/null)
+
+  if set -q TMUX
+    if test "$session_name" = "$current_session"
+      cd "$selected"
+    else if tmux has-session -t="$session_name" 2>/dev/null
+      tmux switch-client -t "$session_name"
+    else
+      tmux new-session -d -s "$session_name" -c "$selected"
+      tmux switch-client -t "$session_name"
+    end
+  else
+    if tmux has-session -t="$session_name" 2>/dev/null
+      tmux attach -t "$session_name"
+    else
+      tmux new-session -s "$session_name" -c "$selected"
+    end
+  end
+end
