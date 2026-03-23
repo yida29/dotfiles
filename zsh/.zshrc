@@ -49,3 +49,4 @@ function repo() {
 export PATH="$PATH:/Users/yida/.lmstudio/bin"
 # End of LM Studio CLI section
 
+export PATH="$HOME/.local/bin:$PATH"
