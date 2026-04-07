@@ -1,7 +1,11 @@
 set -gx VOLTA_HOME "$HOME/.volta"
-set -gx PATH "$VOLTA_HOME/bin" $PATH
-set -gx PATH $HOME/.local/bin $PATH
-set -gx PATH /opt/homebrew/bin $PATH
+set -gx PATH \
+  $HOME/.local/bin \
+  $HOME/.local/share/aquaproj-aqua/bin \
+  $HOME/.claude/local \
+  "$VOLTA_HOME/bin" \
+  /opt/homebrew/bin \
+  $PATH
 fish_add_path /opt/homebrew/opt/postgresql@16/bin
 starship init fish | source
 
@@ -19,7 +23,23 @@ if test -f ~/.jira_token
 end
 
 function cc
+  claude --dangerously-skip-permissions $argv
+end
+function ccr
   claude --dangerously-skip-permissions --resume $argv
+end
+function claude
+  if test -x $HOME/.local/bin/claude
+    $HOME/.local/bin/claude $argv
+  else if test -x $HOME/.local/share/aquaproj-aqua/bin/claude
+    $HOME/.local/share/aquaproj-aqua/bin/claude $argv
+  else if test -x /Users/yida/.volta/tools/image/node/24.9.0/bin/claude
+    /Users/yida/.volta/tools/image/node/24.9.0/bin/claude $argv
+  else if test -x /opt/homebrew/bin/claude
+    /opt/homebrew/bin/claude $argv
+  else
+    command claude $argv
+  end
 end
 function cx
    codex --dangerously-bypass-approvals-and-sandbox $argv
