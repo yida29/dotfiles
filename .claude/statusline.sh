@@ -66,11 +66,13 @@ else
   CTX_PCT=${CTX_USED_PCT%%.*}
 fi
 
-# --- Gitブランチ ---
-GIT_BRANCH=""
+# --- リポジトリ名・Gitブランチ ---
+REPO_INFO=""
 if git -C "$CWD" rev-parse --git-dir > /dev/null 2>&1; then
+  REPO_NAME=$(basename "$(git -C "$CWD" --no-optional-locks rev-parse --show-toplevel 2>/dev/null)")
   BRANCH=$(git -C "$CWD" --no-optional-locks branch --show-current 2>/dev/null)
-  [ -n "$BRANCH" ] && GIT_BRANCH=" | ${MAGENTA}${BRANCH}${RESET}"
+  REPO_INFO=" | ${GREEN}${REPO_NAME}${RESET}"
+  [ -n "$BRANCH" ] && REPO_INFO+=" ${DIM}(${RESET}${MAGENTA}${BRANCH}${RESET}${DIM})${RESET}"
 fi
 
 # --- レートリミット（stdin JSONから取得） ---
@@ -83,6 +85,6 @@ if [ "$LINES_ADD" -gt 0 ] 2>/dev/null || [ "$LINES_DEL" -gt 0 ] 2>/dev/null; the
   LINE_STATS=" | ${GREEN}+${LINES_ADD}${RESET}/${RED}-${LINES_DEL}${RESET}"
 fi
 
-printf '%b\n' "$(bar_line "cx" "$CTX_PCT") | ${CYAN}${MODEL}${RESET}${GIT_BRANCH}${LINE_STATS}"
+printf '%b\n' "$(bar_line "cx" "$CTX_PCT") | ${CYAN}${MODEL}${RESET}${REPO_INFO}${LINE_STATS}"
 printf '%b\n' "$(bar_line "5h" "$FIVE_PCT") |$FIVE_RESET"
 printf '%b'   "$(bar_line "7d" "$SEVEN_PCT") |$SEVEN_RESET"
