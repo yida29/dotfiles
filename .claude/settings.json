@@ -1,4 +1,7 @@
 {
+  "permissions": {
+    "defaultMode": "auto"
+  },
   "env": {
     "TZ": "Asia/Tokyo"
   },
@@ -31,6 +34,7 @@
       }
     }
   },
+  "autoMemoryEnabled": false,
   "alwaysThinkingEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "voiceEnabled": true,

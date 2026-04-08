@@ -23,7 +23,7 @@ if test -f ~/.jira_token
 end
 
 function cc
-  claude --dangerously-skip-permissions $argv
+  HOMEBREW_NO_AUTO_UPDATE=1 claude --dangerously-skip-permissions $argv
 end
 function ccr
   claude --dangerously-skip-permissions --resume $argv
