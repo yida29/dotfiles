@@ -5,6 +5,7 @@
   "env": {
     "TZ": "Asia/Tokyo"
   },
+  "model": "opus[1m]",
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh"
@@ -34,9 +35,9 @@
       }
     ]
   },
-  "autoMemoryEnabled": false,
   "alwaysThinkingEnabled": false,
-  "skipDangerousModePermissionPrompt": true,
   "voiceEnabled": true,
-  "model": "opus[1m]"
+  "autoMemoryEnabled": false,
+  "skipDangerousModePermissionPrompt": true,
+  "skipAutoPermissionPrompt": true
 }
