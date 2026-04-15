@@ -61,11 +61,11 @@ function claude
 end
 
 function cc
-  HOMEBREW_NO_AUTO_UPDATE=1 claude --enable-automode --resume $argv
+  HOMEBREW_NO_AUTO_UPDATE=1 CLAUDE_CODE_NO_FLICKER=1 claude --permission-mode auto --resume $argv
 end
 
 function ccr
-  claude --enable-automode --resume $argv
+  CLAUDE_CODE_NO_FLICKER=1 claude --permission-mode auto --resume $argv
 end
 
 function cx
