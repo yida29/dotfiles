@@ -1,13 +1,27 @@
+# =============================================================================
+# Environment Variables
+# =============================================================================
+
 set -gx VOLTA_HOME "$HOME/.volta"
+
+# =============================================================================
+# PATH
+# =============================================================================
+
 set -gx PATH \
   $HOME/.local/bin \
   $HOME/.local/share/aquaproj-aqua/bin \
   $HOME/.claude/local \
   "$VOLTA_HOME/bin" \
   /opt/homebrew/bin \
+  $HOME/.lmstudio/bin \
   $PATH
+
 fish_add_path /opt/homebrew/opt/postgresql@16/bin
-starship init fish | source
+
+# =============================================================================
+# API Keys (loaded from dotfiles)
+# =============================================================================
 
 if test -f ~/.backlog_domain
   set -gx BACKLOG_DOMAIN (cat ~/.backlog_domain)
@@ -22,12 +36,16 @@ if test -f ~/.jira_token
   set -gx JIRA_API_TOKEN (cat ~/.jira_token)
 end
 
-function cc
-  HOMEBREW_NO_AUTO_UPDATE=1 claude --dangerously-skip-permissions $argv
-end
-function ccr
-  claude --dangerously-skip-permissions --resume $argv
-end
+# =============================================================================
+# Prompt
+# =============================================================================
+
+starship init fish | source
+
+# =============================================================================
+# AI Tools
+# =============================================================================
+
 function claude
   if test -x $HOME/.local/bin/claude
     $HOME/.local/bin/claude $argv
@@ -41,46 +59,62 @@ function claude
     command claude $argv
   end
 end
+
+function cc
+  HOMEBREW_NO_AUTO_UPDATE=1 claude --enable-automode --resume $argv
+end
+
+function ccr
+  claude --enable-automode --resume $argv
+end
+
 function cx
-   codex --dangerously-bypass-approvals-and-sandbox $argv
+  codex --dangerously-bypass-approvals-and-sandbox $argv
 end
+
 function cop
-  COPILOT_MODEL=gpt-5.2 copilot --allow-all-tools --banner $argv
+  COPILOT_MODEL=gpt-5.4 copilot --allow-all-tools --banner $argv
 end
+
 function ge
   gemini --model gemini-3-pro --yolo $argv
 end
 
-# Neovide aliases
+# =============================================================================
+# Editor
+# =============================================================================
+
 alias nv='nvim'
 alias nvi='neovide'
 
-# Added by LM Studio CLI (lms)
-set -gx PATH $PATH /Users/yida/.lmstudio/bin
-# End of LM Studio CLI section
+# =============================================================================
+# AWS SSM
+# =============================================================================
 
 function prossm
-    set target (aws ec2 describe-instances \
-        --filter "Name=instance-state-name,Values=running" "Name=tag:Role,Values=gui-bastion" \
-        --query "Reservations[*].Instances[*].{Instance:InstanceId}" \
-        --output text \
-        --profile aws-jse \
-        --region ap-northeast-1)
-    aws --profile=aws-jse ssm --region=ap-northeast-1 start-session --target $target
+  set target (aws ec2 describe-instances \
+    --filter "Name=instance-state-name,Values=running" "Name=tag:Role,Values=gui-bastion" \
+    --query "Reservations[*].Instances[*].{Instance:InstanceId}" \
+    --output text \
+    --profile aws-jse \
+    --region ap-northeast-1)
+  aws --profile=aws-jse --region=ap-northeast-1 ssm start-session --target $target
 end
 
 function devssm
-    set target (aws ec2 describe-instances \
-        --filter "Name=instance-state-name,Values=running" "Name=tag:Role,Values=gui-bastion" \
-        --query "Reservations[*].Instances[*].{Instance:InstanceId}" \
-        --output text \
-        --profile aws-jse-dev \
-        --region ap-northeast-1)
-    aws --profile=aws-jse-dev --region=ap-northeast-1 ssm start-session --target $target
+  set target (aws ec2 describe-instances \
+    --filter "Name=instance-state-name,Values=running" "Name=tag:Role,Values=gui-bastion" \
+    --query "Reservations[*].Instances[*].{Instance:InstanceId}" \
+    --output text \
+    --profile aws-jse-dev \
+    --region ap-northeast-1)
+  aws --profile=aws-jse-dev --region=ap-northeast-1 ssm start-session --target $target
 end
 
-
+# =============================================================================
 # ghq + fzf + tmux
+# =============================================================================
+
 function repo
   set selected (ghq list --full-path | fzf --preview "ls -la {}")
   if test -z "$selected"
