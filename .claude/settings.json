@@ -3,7 +3,7 @@
     "TZ": "Asia/Tokyo"
   },
   "permissions": {
-    "defaultMode": "auto"
+    "defaultMode": "bypassPermissions"
   },
   "model": "opus[1m]",
   "hooks": {
@@ -40,5 +40,6 @@
   "autoMemoryEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "theme": "dark-daltonized"
 }
