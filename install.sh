@@ -17,6 +17,9 @@ mkdir -p ~/.config/fish/functions
 ln -sf ~/dotfiles/fish/config.fish ~/.config/fish/config.fish
 ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_prompt.fish
 
+mkdir -p ~/.local/bin
+ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
+
 # AstroNvim installation
 # Only install AstroNvim if it doesn't exist
 if [ ! -d ~/.config/nvim ]; then

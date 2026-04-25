@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# Open multiple SSH connections in separate iTerm2 tabs
+# Usage: sshs [host1 host2 ...] (default: auto-detected, excludes self)
+#        sshs -L 8080:localhost:80 ep home
+#        sshs -J ep -L 8080:localhost:80 home
+
+set -euo pipefail
+
+# ── Host registry ──
+# Tailscale hostname -> SSH alias, tab color (R G B)
+# To add a new host, add an entry here and in SSH config on each machine.
+# Hosts included in the default connection set
+ALL_HOSTS="stb ep home home2"
+declare -A HOST_TS_NAME=(
+  [stb]=st000008003
+  [ep]=yutos-macbook-air
+  [home]=yutos-mac-mini
+  [home2]=rogally-1
+)
+declare -A HOST_COLOR=(
+  [stb]="241 196 15"     # yellow
+  [ep]="46 204 113"      # green
+  [home]="52 152 219"    # blue
+  [home2]="255 255 255"  # white
+)
+DEFAULT_COLOR="149 165 166"  # gray
+
+# ── Detect which host we are running on ──
+get_self_alias() {
+  local ts_hostname
+  ts_hostname="$(hostname -s 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+  for alias in $ALL_HOSTS; do
+    local ts_name="${HOST_TS_NAME[$alias]:-}"
+    if [[ -n "$ts_name" && "$ts_hostname" == "${ts_name,,}" ]]; then
+      echo "$alias"
+      return
+    fi
+  done
+  # Fallback: check Tailscale hostname directly
+  local ts_cmd=""
+  if command -v tailscale &>/dev/null; then
+    ts_cmd="tailscale"
+  elif [ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]; then
+    ts_cmd="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+  fi
+  if [ -n "$ts_cmd" ]; then
+    ts_hostname="$("$ts_cmd" status --self --json 2>/dev/null | grep -o '"HostName":"[^"]*"' | head -1 | cut -d'"' -f4 | tr '[:upper:]' '[:lower:]')"
+  fi
+  for alias in $ALL_HOSTS; do
+    local ts_name="${HOST_TS_NAME[$alias]:-}"
+    if [[ -n "$ts_name" && "$ts_hostname" == "${ts_name,,}" ]]; then
+      echo "$alias"
+      return
+    fi
+  done
+}
+
+# ── Input validation ──
+validate_safe() {
+  local val="$1" label="$2"
+  if [[ ! "$val" =~ ^[a-zA-Z0-9._:*/@,-]+$ ]]; then
+    echo "Error: invalid characters in ${label}: ${val}" >&2
+    exit 1
+  fi
+}
+
+validate_port_forward() {
+  local val="$1"
+  if [[ ! "$val" =~ ^([a-zA-Z0-9.*-]+:)?[0-9]+:[a-zA-Z0-9._-]+:[0-9]+$ ]]; then
+    echo "Error: invalid port forward spec: ${val}" >&2
+    echo "Expected format: [bind_address:]port:host:hostport" >&2
+    exit 1
+  fi
+}
+
+validate_jump_host() {
+  local val="$1"
+  if [[ ! "$val" =~ ^[a-zA-Z0-9._@,-]+$ ]]; then
+    echo "Error: invalid jump host spec: ${val}" >&2
+    exit 1
+  fi
+}
+
+# ── Parse arguments ──
+ssh_opts=()
+hosts=()
+jump_host=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -J)
+      if [ $# -lt 2 ]; then
+        echo "Error: -J requires an argument" >&2
+        exit 1
+      fi
+      validate_jump_host "$2"
+      jump_host="$2"
+      shift 2
+      ;;
+    -J*)
+      jump_host="${1#-J}"
+      validate_jump_host "$jump_host"
+      shift
+      ;;
+    -L)
+      if [ $# -lt 2 ]; then
+        echo "Error: -L requires an argument" >&2
+        exit 1
+      fi
+      validate_port_forward "$2"
+      ssh_opts+=("-L" "$2")
+      shift 2
+      ;;
+    -L*)
+      local_fwd="${1#-L}"
+      validate_port_forward "$local_fwd"
+      ssh_opts+=("-L" "$local_fwd")
+      shift
+      ;;
+    *)
+      validate_safe "$1" "host"
+      hosts+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# ── Default hosts: all except self ──
+if [ ${#hosts[@]} -eq 0 ]; then
+  self="$(get_self_alias)"
+  for h in $ALL_HOSTS; do
+    if [[ "$h" != "$self" ]]; then
+      hosts+=("$h")
+    fi
+  done
+fi
+
+if [ ${#hosts[@]} -eq 0 ]; then
+  echo "Error: no target hosts" >&2
+  exit 1
+fi
+
+# ── Tab color ──
+get_color() {
+  echo "${HOST_COLOR[$1]:-$DEFAULT_COLOR}"
+}
+
+# ── Build SSH options string ──
+ssh_opts_str="${ssh_opts[*]}"
+if [ -n "$jump_host" ]; then
+  ssh_opts_str="-J ${jump_host}${ssh_opts_str:+ ${ssh_opts_str}}"
+fi
+
+# ── Open tabs ──
+for host in "${hosts[@]}"; do
+  read -r r g b <<< "$(get_color "$host")"
+  if [ -n "$ssh_opts_str" ]; then
+    ssh_cmd="ssh ${ssh_opts_str} ${host}"
+  else
+    ssh_cmd="ssh ${host}"
+  fi
+  osascript -e "
+tell application \"iTerm2\"
+  activate
+  tell current window
+    set newTab to (create tab with default profile)
+    tell current session of newTab
+      write text \"printf '\\\\e]6;1;bg;red;brightness;${r}\\\\a\\\\e]6;1;bg;green;brightness;${g}\\\\a\\\\e]6;1;bg;blue;brightness;${b}\\\\a'\"
+      write text \"${ssh_cmd}\"
+    end tell
+  end tell
+end tell
+"
+done
