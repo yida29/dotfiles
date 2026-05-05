@@ -50,7 +50,7 @@ require("lazy").setup({
         pattern = "skkeleton-initialize-pre",
         callback = function()
           vim.fn["skkeleton#config"]({
-            globalDictionaries = { "~/.skk/SKK-JISYO.L" },
+            globalDictionaries = { { "~/.skk/SKK-JISYO.L", "euc-jp" } },
           })
         end,
       })
@@ -121,6 +121,32 @@ vim.api.nvim_create_autocmd("User", {
 vim.keymap.set("n", "<Space>y", 'ggVG"+y', { desc = "Yank all to clipboard" })
 vim.keymap.set("n", "<Space>d", "ggVGd", { desc = "Delete all" })
 vim.keymap.set("n", "<Space><CR>", 'ggVG"+ygg"_dG', { desc = "Yank all then clear" })
+
+-- -----------------------------------------------------------------------------
+-- Commit input: yank current line / selection to clipboard, then ask
+-- Hammerspoon to switch focus back and paste it into the previous app.
+-- -----------------------------------------------------------------------------
+local function commit_to_hammerspoon()
+  vim.fn.jobstart({ "open", "-g", "hammerspoon://nvim-ime-commit" }, { detach = true })
+end
+
+vim.keymap.set("n", "<D-CR>", function()
+  vim.cmd('normal! "+yy')
+  commit_to_hammerspoon()
+end, { desc = "Commit current line to previous app" })
+
+vim.keymap.set("v", "<D-CR>", function()
+  vim.cmd('normal! "+y')
+  commit_to_hammerspoon()
+end, { desc = "Commit selection to previous app" })
+
+vim.keymap.set("i", "<D-CR>", function()
+  vim.cmd("stopinsert")
+  vim.schedule(function()
+    vim.cmd('normal! "+yy')
+    commit_to_hammerspoon()
+  end)
+end, { desc = "Commit current line to previous app (from insert)" })
 
 -- -----------------------------------------------------------------------------
 -- Auto-save scratch buffer

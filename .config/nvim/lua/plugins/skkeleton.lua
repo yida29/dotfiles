@@ -10,7 +10,7 @@ return {
 				pattern = "skkeleton-initialize-pre",
 				callback = function()
 					vim.fn["skkeleton#config"]({
-						globalDictionaries = { "~/.skk/SKK-JISYO.L" },
+						globalDictionaries = { { "~/.skk/SKK-JISYO.L", "euc-jp" } },
 					})
 				end,
 			})

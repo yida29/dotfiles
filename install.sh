@@ -20,6 +20,15 @@ ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_
 mkdir -p ~/.local/bin
 ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
 
+# Hammerspoon (macOS only): used for nvim-ime → previous-app paste hand-off
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  if ! [ -d "/Applications/Hammerspoon.app" ]; then
+    echo "Installing Hammerspoon..."
+    brew install --cask hammerspoon
+  fi
+  ln -sf ~/dotfiles/.hammerspoon ~/.hammerspoon
+fi
+
 # AstroNvim installation
 # Only install AstroNvim if it doesn't exist
 if [ ! -d ~/.config/nvim ]; then
@@ -106,6 +115,16 @@ if [ ! -f ~/.skk/SKK-JISYO.L ]; then
   echo "Downloading SKK-JISYO.L..."
   mkdir -p ~/.skk
   curl -L https://skk-dev.github.io/dict/SKK-JISYO.L.gz | gunzip > ~/.skk/SKK-JISYO.L
+fi
+
+# Link skkeleton user dictionary (shared across hosts via dotfiles)
+if [ -f ~/dotfiles/.skk/userJisyo ]; then
+  if [ -e ~/.skkeleton ] && [ ! -L ~/.skkeleton ]; then
+    # Existing real file: merge into dotfiles version then back up
+    echo "Merging existing ~/.skkeleton into dotfiles..."
+    mv ~/.skkeleton ~/.skkeleton.local-backup-$(date +%Y%m%d_%H%M%S)
+  fi
+  ln -sf ~/dotfiles/.skk/userJisyo ~/.skkeleton
 fi
 
 git config --global ghq.root ~/work
