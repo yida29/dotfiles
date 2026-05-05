@@ -3,7 +3,7 @@ return {
   opts = {
     dashboard = {
       preset = {
-        header = "", -- Disable AstroNvim logo
+        header = "", -- Disable LazyVim logo
       },
     },
   },

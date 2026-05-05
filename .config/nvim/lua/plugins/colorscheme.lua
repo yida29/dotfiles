@@ -1,7 +1,7 @@
 return {
   { "w0ng/vim-hybrid" },
   {
-    "AstroNvim/astroui",
+    "LazyVim/LazyVim",
     opts = {
       colorscheme = "hybrid",
     },
