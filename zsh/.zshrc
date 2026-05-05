@@ -8,6 +8,10 @@ eval "$(pyenv init -)"
 
 . "$HOME/.local/bin/env"
 
+# Editor
+export EDITOR='nvim'
+export VISUAL='nvim'
+
 # opencode
 export PATH=$HOME/.opencode/bin:$PATH
 

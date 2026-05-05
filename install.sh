@@ -86,6 +86,28 @@ if ! command -v delta &> /dev/null; then
   brew install git-delta
 fi
 
+# Install Deno (required by denops.vim for skkeleton)
+if ! command -v deno &> /dev/null; then
+  echo "Installing deno..."
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    brew install deno
+  else
+    curl -fsSL https://deno.land/install.sh | sh
+    # Symlink into ~/.local/bin so it picks up the existing PATH entry
+    if [ -x "$HOME/.deno/bin/deno" ]; then
+      mkdir -p "$HOME/.local/bin"
+      ln -sf "$HOME/.deno/bin/deno" "$HOME/.local/bin/deno"
+    fi
+  fi
+fi
+
+# Install SKK dictionary for skkeleton
+if [ ! -f ~/.skk/SKK-JISYO.L ]; then
+  echo "Downloading SKK-JISYO.L..."
+  mkdir -p ~/.skk
+  curl -L https://skk-dev.github.io/dict/SKK-JISYO.L.gz | gunzip > ~/.skk/SKK-JISYO.L
+fi
+
 git config --global ghq.root ~/work
 git config --global core.editor 'vim -c "set fenc=utf-8"'
 

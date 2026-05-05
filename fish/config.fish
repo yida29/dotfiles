@@ -84,6 +84,8 @@ end
 # Editor
 # =============================================================================
 
+set -gx EDITOR nvim
+set -gx VISUAL nvim
 alias nv='nvim'
 alias nvi='neovide'
 
