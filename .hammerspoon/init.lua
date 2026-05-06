@@ -84,6 +84,9 @@ end
 
 -- These watchers must outlive this file's load, so we keep them in
 -- file-local variables (which live for the whole Hammerspoon session).
+-- The variables themselves aren't read after assignment; their only job
+-- is to stop GC from collecting the watcher / timer objects.
+---@diagnostic disable-next-line: unused-local
 local appWatcher = hs.application.watcher.new(function(_, eventType, _)
   if eventType == hs.application.watcher.activated then
     refreshTracking()
@@ -93,6 +96,7 @@ appWatcher:start()
 
 -- App-activation events alone don't fire when switching between two iTerm2
 -- windows in the same app, so poll as well.
+---@diagnostic disable-next-line: unused-local
 local windowPoller = hs.timer.doEvery(POLL_INTERVAL, refreshTracking)
 
 -- -----------------------------------------------------------------------------
@@ -133,6 +137,7 @@ end)
 -- -----------------------------------------------------------------------------
 -- Auto-reload when this file changes.
 -- -----------------------------------------------------------------------------
+---@diagnostic disable-next-line: unused-local
 local configWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/",
   function(files)
     for _, file in ipairs(files) do
