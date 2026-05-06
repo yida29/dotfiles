@@ -8,6 +8,11 @@
 -- replay Cmd+V there.
 -- =============================================================================
 
+-- EmmyLua Spoon writes ~/.hammerspoon/Spoons/EmmyLua.spoon/annotations/ on
+-- load; lua_ls picks those up as a library (see .luarc.json) so hs.* gets
+-- proper completion and warnings.
+hs.loadSpoon("EmmyLua")
+
 local ITERM_BUNDLE = "com.googlecode.iterm2"
 local IME_HOTKEY = { mods = { "cmd" }, key = "j" }
 local POLL_INTERVAL = 0.5
@@ -77,7 +82,9 @@ local function refreshTracking()
   previousWindow = focused
 end
 
-appWatcher = hs.application.watcher.new(function(_, eventType, _)
+-- These watchers must outlive this file's load, so we keep them in
+-- file-local variables (which live for the whole Hammerspoon session).
+local appWatcher = hs.application.watcher.new(function(_, eventType, _)
   if eventType == hs.application.watcher.activated then
     refreshTracking()
   end
@@ -86,7 +93,7 @@ appWatcher:start()
 
 -- App-activation events alone don't fire when switching between two iTerm2
 -- windows in the same app, so poll as well.
-windowPoller = hs.timer.doEvery(POLL_INTERVAL, refreshTracking)
+local windowPoller = hs.timer.doEvery(POLL_INTERVAL, refreshTracking)
 
 -- -----------------------------------------------------------------------------
 -- URL handler: hammerspoon://nvim-ime-commit
@@ -126,7 +133,7 @@ end)
 -- -----------------------------------------------------------------------------
 -- Auto-reload when this file changes.
 -- -----------------------------------------------------------------------------
-configWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/",
+local configWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/",
   function(files)
     for _, file in ipairs(files) do
       if file:match("%.lua$") then
