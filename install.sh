@@ -20,6 +20,14 @@ ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_
 mkdir -p ~/.local/bin
 ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
 
+# nvim-ime: standalone Neovim config used as a SKK-only IME
+mkdir -p ~/.config
+if [ -e ~/.config/nvim-ime ] && [ ! -L ~/.config/nvim-ime ]; then
+  echo "Backing up existing ~/.config/nvim-ime..."
+  mv ~/.config/nvim-ime ~/.config/nvim-ime.local-backup-$(date +%Y%m%d_%H%M%S)
+fi
+ln -sf ~/dotfiles/.config/nvim-ime ~/.config/nvim-ime
+
 # Hammerspoon (macOS only): used for nvim-ime → previous-app paste hand-off
 if [[ "$OSTYPE" == "darwin"* ]]; then
   if ! [ -d "/Applications/Hammerspoon.app" ]; then
