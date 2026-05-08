@@ -37,6 +37,12 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   ln -sf ~/dotfiles/.hammerspoon ~/.hammerspoon
 fi
 
+# iTerm2 (macOS only): point preferences to dotfiles for cross-host sync
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/iterm2"
+  defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+fi
+
 # AstroNvim installation
 # Only install AstroNvim if it doesn't exist
 if [ ! -d ~/.config/nvim ]; then
