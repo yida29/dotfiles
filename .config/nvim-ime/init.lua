@@ -1,10 +1,18 @@
 -- =============================================================================
--- nvim-ime: Minimal Neovim config for Japanese input via skkeleton.
+-- nvim-ime: minimal Neovim config used as a SKK Japanese-input pad.
 --
--- Pairs with ~/.hammerspoon/init.lua. Intended to live in iTerm2's hotkey
--- window so the user can pop up a Japanese-input pad from anywhere.
+-- Pairs with ~/.hammerspoon/init.lua. Lives inside iTerm2's hotkey window
+-- (profile "Japanese Input"); hitting Cmd+J pops up a Neovim instance that
+-- starts already in skkeleton's hira mode at the bottom of a scratch file.
+-- After typing, hitting <CR> in normal mode commits the line back to the
+-- previous app (Hammerspoon does the actual focus + paste) and quits.
 --
--- Launch with: NVIM_APPNAME=nvim-ime nvim
+-- Quitting on commit is intentional: the iTerm2 profile is set to
+-- "Close Sessions On End", and the short-lived-session warning is suppressed
+-- via NeverWarnAboutShortLivedSessions_<GUID>. So every Cmd+J spawns a fresh
+-- nvim, which guarantees skkeleton initializes cleanly each time.
+--
+-- Launch manually with: NVIM_APPNAME=nvim-ime nvim
 -- =============================================================================
 
 local SCRATCH_FILE = "~/Documents/ime-scratch.md"
@@ -25,8 +33,7 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 -- -----------------------------------------------------------------------------
--- Minimal UI: no swap/backup files (the always-on session would collide
--- with itself), and most chrome stripped down to just lualine.
+-- Minimal UI.
 -- -----------------------------------------------------------------------------
 vim.opt.number = true
 vim.opt.relativenumber = false
@@ -41,7 +48,6 @@ vim.opt.swapfile = false
 vim.opt.backup = false
 vim.opt.writebackup = false
 
--- Treat Ctrl+C as Escape in insert mode (matches the main nvim config).
 vim.keymap.set("i", "<C-c>", "<Esc>", { noremap = true })
 
 -- -----------------------------------------------------------------------------
@@ -53,7 +59,9 @@ require("lazy").setup({
     "vim-skk/skkeleton",
     dependencies = { "vim-denops/denops.vim" },
     config = function()
-      vim.keymap.set({ "i", "c" }, "<C-j>", "<Plug>(skkeleton-toggle)")
+      -- enable (not toggle): pressing <C-j> always lands in hira regardless
+      -- of current state. Disable by leaving insert mode (<Esc>).
+      vim.keymap.set({ "i", "c" }, "<C-j>", "<Plug>(skkeleton-enable)")
       vim.api.nvim_create_autocmd("User", {
         pattern = "skkeleton-initialize-pre",
         callback = function()
@@ -87,60 +95,71 @@ require("lazy").setup({
 })
 
 -- -----------------------------------------------------------------------------
--- On startup, open the scratch buffer at the end and drop into insert mode.
+-- Helpers.
 -- -----------------------------------------------------------------------------
-vim.api.nvim_create_autocmd("VimEnter", {
-  callback = function()
-    local scratch = vim.fn.expand(SCRATCH_FILE)
-    if vim.fn.filereadable(scratch) == 0 then
-      vim.fn.writefile({}, scratch)
-    end
-    vim.cmd("edit " .. vim.fn.fnameescape(scratch))
-    vim.cmd("normal! G")
-    vim.schedule(function() vim.cmd("startinsert!") end)
-  end,
-})
-
--- Once skkeleton finishes loading via denops, auto-enable it so the user
--- doesn't have to press <C-j> every time the window appears.
-vim.api.nvim_create_autocmd("User", {
-  pattern = "DenopsPluginPost:skkeleton",
-  callback = function()
-    vim.schedule(function()
-      if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "i" then
-        vim.cmd("startinsert!")
-      end
-      local keys = vim.api.nvim_replace_termcodes("<Plug>(skkeleton-enable)",
-        true, false, true)
-      vim.api.nvim_feedkeys(keys, "i", false)
-    end)
-  end,
-})
-
--- -----------------------------------------------------------------------------
--- Commit: yank current line / selection (without trailing newline) and let
--- Hammerspoon switch focus and paste into the previous iTerm2 window.
---
--- Workflow: type Japanese in insert mode, <Esc> to normal, <CR> to commit.
--- -----------------------------------------------------------------------------
-local function commit_to_hammerspoon()
-  vim.fn.jobstart({ "open", "-g", COMMIT_URL }, { detach = true })
+local function ensure_trailing_blank_line(bufnr)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  if #lines > 0 and lines[#lines] ~= "" then
+    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, { "" })
+  end
 end
 
+local function open_scratch_at_bottom()
+  local scratch = vim.fn.expand(SCRATCH_FILE)
+  if vim.fn.filereadable(scratch) == 0 then
+    vim.fn.writefile({}, scratch)
+  end
+  vim.cmd("edit " .. vim.fn.fnameescape(scratch))
+  ensure_trailing_blank_line(0)
+  vim.cmd("normal! G")
+  vim.schedule(function() vim.cmd("startinsert!") end)
+end
+
+local function enter_hira()
+  vim.schedule(function()
+    if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "i" then
+      vim.cmd("startinsert!")
+    end
+    -- Run via vim.cmd so the dict literal is parsed by Vimscript itself
+    -- (a Lua {} crosses the bridge as a List, which skkeleton#handle rejects).
+    pcall(vim.cmd, [[silent! call skkeleton#handle('enable', {})]])
+  end)
+end
+
+local function commit_and_quit()
+  vim.fn.jobstart({ "open", "-g", COMMIT_URL }, { detach = true })
+  vim.cmd("silent! wall")
+  vim.cmd("qa!")
+end
+
+-- -----------------------------------------------------------------------------
+-- Startup: open scratch, jump to the bottom, and turn SKK on once denops
+-- has finished loading skkeleton.
+-- -----------------------------------------------------------------------------
+vim.api.nvim_create_autocmd("VimEnter", { callback = open_scratch_at_bottom })
+
+vim.api.nvim_create_autocmd("User", {
+  pattern = "DenopsPluginPost:skkeleton",
+  callback = enter_hira,
+})
+
+-- -----------------------------------------------------------------------------
+-- Commit (normal/visual <CR>): yank current line / selection without trailing
+-- newline, hand off to Hammerspoon, then quit so the next Cmd+J starts fresh.
+-- -----------------------------------------------------------------------------
 vim.keymap.set("n", "<CR>", function()
   vim.fn.setreg("+", vim.api.nvim_get_current_line())
-  commit_to_hammerspoon()
+  commit_and_quit()
 end, { desc = "Commit current line to previous app" })
 
 vim.keymap.set("v", "<CR>", function()
   vim.cmd('normal! "+y')
   vim.fn.setreg("+", (vim.fn.getreg("+"):gsub("\n$", "")))
-  commit_to_hammerspoon()
+  commit_and_quit()
 end, { desc = "Commit selection to previous app" })
 
 -- -----------------------------------------------------------------------------
--- Auto-save the scratch buffer so the always-on session never has unsaved
--- changes to complain about on quit.
+-- Auto-save the scratch buffer so :qa! never has to discard unsaved edits.
 -- -----------------------------------------------------------------------------
 vim.api.nvim_create_autocmd({ "InsertLeave", "TextChanged", "FocusLost" }, {
   callback = function()

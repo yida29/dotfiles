@@ -3,9 +3,9 @@
 --
 -- Pairs with ~/.config/nvim-ime/init.lua. nvim-ime runs in iTerm2's hotkey
 -- window; when the user confirms input, it yanks the line into the system
--- clipboard and opens hammerspoon://nvim-ime-commit. We then dismiss the
--- hotkey window, refocus the window the user was looking at before, and
--- replay Cmd+V there.
+-- clipboard, opens hammerspoon://nvim-ime-commit, and quits. The iTerm2
+-- profile closes the window on session end, so all this URL handler has to
+-- do is refocus the window the user came from and replay Cmd+V there.
 -- =============================================================================
 
 -- EmmyLua Spoon writes ~/.hammerspoon/Spoons/EmmyLua.spoon/annotations/ on
@@ -14,7 +14,6 @@
 hs.loadSpoon("EmmyLua")
 
 local ITERM_BUNDLE = "com.googlecode.iterm2"
-local IME_HOTKEY = { mods = { "cmd" }, key = "j" }
 local POLL_INTERVAL = 0.5
 local HIDE_DELAY = 0.15
 local PASTE_DELAY = 0.15
@@ -123,9 +122,9 @@ hs.urlevent.bind("nvim-ime-commit", function()
     target = freshHandle(previousITermWindow)
   end
 
-  -- Toggle iTerm2's hotkey window off by re-sending its hotkey.
-  hs.eventtap.keyStroke(IME_HOTKEY.mods, IME_HOTKEY.key, 0)
-
+  -- nvim-ime quits itself with :qa! after firing this URL, and the
+  -- "Japanese Input" profile is set to "Close Sessions On End", so the
+  -- hotkey window goes away on its own.
   hs.timer.doAfter(HIDE_DELAY, function()
     if target then target:focus() end
     hs.timer.doAfter(PASTE_DELAY, function()
