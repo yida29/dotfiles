@@ -41,9 +41,9 @@ local hotkeyWindowId = nil
 
 local function looksLikeImeWindow(win)
   if hotkeyWindowId and win:id() == hotkeyWindowId then return true end
-  -- The nvim-ime buffer is ime-scratch.md, but a freshly-launched nvim or a
-  -- nameless buffer also gives "nvim" / "" as the window title. Either way,
-  -- we never want to paste into it.
+  -- The vim-ime buffer is ~/Documents/ime-scratch (no extension), but a
+  -- freshly-launched vim or a nameless buffer also gives "nvim" / "" as the
+  -- window title. Either way, we never want to paste into it.
   local title = win:title() or ""
   return title:match("ime%-scratch") ~= nil or title == "nvim" or title == ""
 end
