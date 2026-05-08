@@ -29,13 +29,20 @@ ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_
 mkdir -p ~/.local/bin
 ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
 
-# nvim-ime: standalone Neovim config used as a SKK-only IME
-mkdir -p ~/.config
-if [ -e ~/.config/nvim-ime ] && [ ! -L ~/.config/nvim-ime ]; then
-  echo "Backing up existing ~/.config/nvim-ime..."
-  mv ~/.config/nvim-ime ~/.config/nvim-ime.local-backup-$(date +%Y%m%d_%H%M%S)
+# Vim is used as a SKK-only IME pad (~/.vimrc handles the wiring). Plugins
+# live in ~/.vim/pack/plugins/start/ and are loaded by Vim's native
+# :h packages mechanism, so we just clone the upstream repos.
+VIM_PACK="$HOME/.vim/pack/plugins/start"
+mkdir -p "$VIM_PACK"
+if [ ! -d "$VIM_PACK/denops.vim" ]; then
+  git clone --depth 1 https://github.com/vim-denops/denops.vim "$VIM_PACK/denops.vim"
 fi
-ln -sf ~/dotfiles/.config/nvim-ime ~/.config/nvim-ime
+if [ ! -d "$VIM_PACK/skkeleton" ]; then
+  git clone --depth 1 https://github.com/vim-skk/skkeleton "$VIM_PACK/skkeleton"
+fi
+if [ ! -d "$VIM_PACK/kanagawa.nvim" ]; then
+  git clone --depth 1 https://github.com/rebelot/kanagawa.nvim "$VIM_PACK/kanagawa.nvim"
+fi
 
 # Hammerspoon (macOS only): used for nvim-ime → previous-app paste hand-off
 if [[ "$OSTYPE" == "darwin"* ]]; then

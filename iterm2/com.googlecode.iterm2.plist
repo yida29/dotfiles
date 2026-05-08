@@ -32,6 +32,8 @@
 	<false/>
 	<key>HotkeyMigratedFromSingleToMulti</key>
 	<true/>
+	<key>NeverWarnAboutShortLivedSessions_B21BB39C-36F0-4C5D-A289-1E33C172D5D3</key>
+	<true/>
 	<key>New Bookmarks</key>
 	<array>
 		<dict>
@@ -1916,7 +1918,7 @@
 			<key>Columns</key>
 			<integer>80</integer>
 			<key>Command</key>
-			<string>/bin/zsh -l -c "NVIM_APPNAME=nvim-ime /opt/homebrew/bin/nvim"</string>
+			<string>/bin/bash -c "/opt/homebrew/bin/vim -u $HOME/.config/vim-ime/vimrc"</string>
 			<key>Cursor Color</key>
 			<dict>
 				<key>Alpha Component</key>

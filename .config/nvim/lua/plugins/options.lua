@@ -17,8 +17,11 @@ return {
       -- Clipboard settings
       vim.opt.clipboard = "unnamedplus"
 
-      -- Map Ctrl-c to Escape in insert mode
-      vim.keymap.set('i', '<C-c>', '<Esc>', { noremap = true })
+      -- Disable <C-c> in insert / cmdline modes so it stops standing in
+      -- for <Esc>. Without this, Vim's default makes <C-c> behave like a
+      -- weak Esc; mapping to <Nop> forces actual <Esc> (or <C-[>) usage.
+      vim.keymap.set('i', '<C-c>', '<Nop>', { noremap = true })
+      vim.keymap.set('c', '<C-c>', '<Nop>', { noremap = true })
     end,
     priority = 1000,
     lazy = false,
