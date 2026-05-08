@@ -37,10 +37,17 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   ln -sf ~/dotfiles/.hammerspoon ~/.hammerspoon
 fi
 
-# iTerm2 (macOS only): point preferences to dotfiles for cross-host sync
+# iTerm2 (macOS only): point preferences to dotfiles for cross-host sync.
+# Note: NeverWarnAboutShortLivedSessions_<GUID> doesn't get written to the
+# shared plist, so we set it per-host here. Without it, the "Japanese Input"
+# profile (which :qa!s on commit) triggers iTerm2's "session ended very soon"
+# dialog every time.
 if [[ "$OSTYPE" == "darwin"* ]]; then
   defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/iterm2"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+  JAPANESE_PROFILE_GUID="B21BB39C-36F0-4C5D-A289-1E33C172D5D3"
+  defaults write com.googlecode.iterm2 \
+    "NeverWarnAboutShortLivedSessions_${JAPANESE_PROFILE_GUID}" -bool true
 fi
 
 # AstroNvim installation
