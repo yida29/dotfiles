@@ -1,4 +1,13 @@
 #!/bin/bash
+
+# -----------------------------------------------------------------------------
+# Constants
+# -----------------------------------------------------------------------------
+# iTerm2 profile GUID for "Japanese Input" (used by nvim-ime hotkey window).
+# Defined once in iterm2/com.googlecode.iterm2.plist; we reference it here so
+# we can scope per-profile defaults like NeverWarnAboutShortLivedSessions.
+ITERM2_JAPANESE_PROFILE_GUID="B21BB39C-36F0-4C5D-A289-1E33C172D5D3"
+
 if [[ "$OSTYPE" != "msys" ]]; then
 ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.ctags ~/.ctags
@@ -45,9 +54,8 @@ fi
 if [[ "$OSTYPE" == "darwin"* ]]; then
   defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/iterm2"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
-  JAPANESE_PROFILE_GUID="B21BB39C-36F0-4C5D-A289-1E33C172D5D3"
   defaults write com.googlecode.iterm2 \
-    "NeverWarnAboutShortLivedSessions_${JAPANESE_PROFILE_GUID}" -bool true
+    "NeverWarnAboutShortLivedSessions_${ITERM2_JAPANESE_PROFILE_GUID}" -bool true
 fi
 
 # AstroNvim installation
