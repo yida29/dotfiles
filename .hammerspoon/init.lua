@@ -31,18 +31,10 @@ local EXCLUDED_APPS = {
   ["Hammerspoon"] = true,
 }
 
--- The hotkey window's session passes through several titles depending on
--- which point of the launch we look at it ("zsh"/"bash"/"fish" while the
--- shell is starting, "vim"/"nvim" once the editor takes over,
--- "ime-scratch" once the scratch buffer is loaded, "open" while the URL
--- handler is firing, "" during transitions). We refuse to treat any
--- iTerm2 window with one of these titles as a paste target.
-local IME_TRANSIENT_TITLES = {
-  ["vim"]  = true, ["nvim"] = true,
-  ["zsh"]  = true, ["bash"] = true, ["fish"] = true,
-  ["open"] = true,
-  [""]     = true,
-}
+-- The pure helper logic lives in lib/ime.lua so it can be unit-tested
+-- without Hammerspoon (see test/ime_test.lua, run with `busted` from
+-- ~/dotfiles/.hammerspoon/).
+local ime = require("lib.ime")
 
 -- -----------------------------------------------------------------------------
 -- Window tracking. Two pieces of state:
@@ -57,10 +49,7 @@ local previousITermWindow = nil
 local hotkeyWindowId      = nil
 
 local function looksLikeImeWindow(win)
-  if hotkeyWindowId and win:id() == hotkeyWindowId then return true end
-  local title = win:title() or ""
-  if title:match("ime%-scratch") then return true end
-  return IME_TRANSIENT_TITLES[title] == true
+  return ime.looksLikeImeWindow(win, hotkeyWindowId)
 end
 
 local function refreshTracking()
@@ -126,22 +115,13 @@ local function freshHandle(win)
 end
 
 local function chooseTarget()
-  -- Default: the most recent valid window across all apps.
-  local target = freshHandle(previousWindow)
-
-  -- Defensive: if previousWindow somehow ended up pointing at the IME
-  -- hotkey window (race conditions during launch), drop it and fall
-  -- through to the iTerm2 fallback below.
-  if target and target:application()
-      and target:application():bundleID() == ITERM_BUNDLE
-      and looksLikeImeWindow(target) then
-    target = nil
-  end
-
-  if not target then
-    target = freshHandle(previousITermWindow)
-  end
-  return target
+  return ime.chooseTarget({
+    previousWindow      = previousWindow,
+    previousITermWindow = previousITermWindow,
+    hotkeyWindowId      = hotkeyWindowId,
+    itermBundle         = ITERM_BUNDLE,
+    refresh             = freshHandle,
+  })
 end
 
 hs.urlevent.bind(COMMIT_URL, function()
