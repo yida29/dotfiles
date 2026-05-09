@@ -40,3 +40,18 @@ vim.g.clipboard = {
     ["*"] = require("vim.ui.clipboard.osc52").paste("*"),
   },
 }
+
+-- LazyVim's options.lua intentionally sets clipboard="" under SSH because
+-- it expects users to use a manual OSC 52 yank plugin. We *do* have OSC 52
+-- wired in (above), so we want yanks to flow into "+" automatically. Force
+-- unnamedplus back on; LazyVim's lazy_clipboard restore at VeryLazy reads
+-- whatever vim.opt.clipboard is at the moment LazyVim.setup runs and writes
+-- it back later, so set it both now and again at VeryLazy to survive.
+vim.opt.clipboard = "unnamedplus"
+vim.api.nvim_create_autocmd("User", {
+  pattern = "VeryLazy",
+  once = true,
+  callback = function()
+    vim.opt.clipboard = "unnamedplus"
+  end,
+})
