@@ -67,6 +67,16 @@ describe("looksLikeImeWindow", function()
     end
   end)
 
+  it("matches whitespace-only titles too", function()
+    -- iTerm2's hotkey window briefly reports title=" " or "  " between
+    -- session restarts. Treat any whitespace-only string the same as "".
+    for _, title in ipairs({ " ", "  ", "\t", "\n", " \t " }) do
+      local win = mkWin({ id = 1, title = title })
+      assert.is_true(ime.looksLikeImeWindow(win, nil),
+        "expected whitespace title to be classified as IME")
+    end
+  end)
+
   it("rejects an ordinary tmux terminal", function()
     local win = mkWin({ id = 1, title = "tmux" })
     assert.is_false(ime.looksLikeImeWindow(win, nil))

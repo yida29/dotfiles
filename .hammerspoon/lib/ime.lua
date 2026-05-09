@@ -26,6 +26,9 @@ function M.looksLikeImeWindow(win, hotkeyWindowId)
   if hotkeyWindowId and win:id() == hotkeyWindowId then return true end
   local title = win:title() or ""
   if title:match("ime%-scratch") then return true end
+  -- Whitespace-only titles (incl. " ", "  ", "\t") are also a transient
+  -- state of the hotkey window before its session settles. Strip first.
+  if title:match("^%s*$") then return true end
   return M.IME_TRANSIENT_TITLES[title] == true
 end
 
