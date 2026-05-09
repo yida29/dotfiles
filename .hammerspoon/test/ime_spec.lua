@@ -93,13 +93,11 @@ end)
 -- -----------------------------------------------------------------------------
 describe("chooseTarget", function()
   local function call(opts)
-    -- Default to identity refresh so a window passed in comes back out.
-    opts.refresh = opts.refresh or function(w) return w end
     opts.itermBundle = opts.itermBundle or ITERM
     return ime.chooseTarget(opts)
   end
 
-  it("returns previousWindow when it's valid", function()
+  it("returns previousWindow when it's set", function()
     local slack = mkWin({ id = 1, title = "Slack", bundleID = "com.tinyspeck.slackmacgap" })
     local target = call({
       previousWindow      = slack,
@@ -118,18 +116,12 @@ describe("chooseTarget", function()
     assert.is_nil(target)
   end)
 
-  it("falls back to previousITermWindow when previousWindow is gone", function()
-    local stale = mkWin({ id = 1, title = "old" })
-    local tmux  = mkWin({ id = 2, title = "tmux", bundleID = ITERM })
+  it("falls back to previousITermWindow when previousWindow is nil", function()
+    local tmux = mkWin({ id = 2, title = "tmux", bundleID = ITERM })
     local target = call({
-      previousWindow      = stale,
+      previousWindow      = nil,
       previousITermWindow = tmux,
       hotkeyWindowId      = nil,
-      -- refresh treats stale as gone, tmux as still alive.
-      refresh = function(w)
-        if w == stale then return nil end
-        return w
-      end,
     })
     assert.are.equal(tmux, target)
   end)
@@ -166,17 +158,5 @@ describe("chooseTarget", function()
       hotkeyWindowId      = nil,
     })
     assert.are.equal(tmux, target)
-  end)
-
-  it("returns nil when both windows refresh to nil", function()
-    local stale1 = mkWin({ id = 1, title = "x" })
-    local stale2 = mkWin({ id = 2, title = "y" })
-    local target = call({
-      previousWindow      = stale1,
-      previousITermWindow = stale2,
-      hotkeyWindowId      = nil,
-      refresh = function() return nil end,
-    })
-    assert.is_nil(target)
   end)
 end)

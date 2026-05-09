@@ -107,20 +107,12 @@ _G.imeWindowPoller = hs.timer.doEvery(POLL_INTERVAL, refreshTracking)
 -- -----------------------------------------------------------------------------
 -- URL handler: hammerspoon://<COMMIT_URL>
 -- -----------------------------------------------------------------------------
-local function freshHandle(win)
-  if not win then return nil end
-  local id = win:id()
-  if not id then return nil end
-  return hs.window.get(id)
-end
-
 local function chooseTarget()
   return ime.chooseTarget({
     previousWindow      = previousWindow,
     previousITermWindow = previousITermWindow,
     hotkeyWindowId      = hotkeyWindowId,
     itermBundle         = ITERM_BUNDLE,
-    refresh             = freshHandle,
   })
 end
 

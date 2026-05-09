@@ -34,22 +34,23 @@ end
 
 -- Pick which window the URL handler should focus + paste into.
 --
+-- We deliberately do NOT call hs.window.get(id) to "freshen" the window
+-- handle: that call enumerates every window in the system and on a busy
+-- machine (lots of Chrome tabs etc.) it can take well over a second.
+-- The cached handle is good enough — focus() on a stale handle either
+-- works or no-ops, and the user notices the latter and re-focuses by
+-- hand. Trading a rare manual nudge for not paying ~1.8s on every
+-- commit is worth it.
+--
 -- Args (table form so test calls read clearly):
 --   previousWindow      : last-seen focused window of any non-IME app
 --   previousITermWindow : last-seen non-IME iTerm2 window
 --   hotkeyWindowId      : id of the IME hotkey window (or nil)
---   itermBundle         : iTerm2's bundle id (passed in to keep this
---                         module bundle-id agnostic)
---   refresh             : function(win) -> win/nil; "fresh handle" lookup
---                         that returns nil if the window is gone. Tests
---                         can pass `function(w) return w end` to short-
---                         circuit it; init.lua passes hs.window.get-based
---                         freshHandle.
+--   itermBundle         : iTerm2's bundle id
 --
 -- Returns the chosen target window, or nil if nothing usable remains.
 function M.chooseTarget(opts)
-  local refresh = opts.refresh or function(w) return w end
-  local target  = refresh(opts.previousWindow)
+  local target = opts.previousWindow
 
   -- If previousWindow somehow ended up pointing at the IME hotkey
   -- window, drop it and fall through to the iTerm2 fallback.
@@ -62,7 +63,7 @@ function M.chooseTarget(opts)
   end
 
   if not target then
-    target = refresh(opts.previousITermWindow)
+    target = opts.previousITermWindow
   end
   return target
 end
