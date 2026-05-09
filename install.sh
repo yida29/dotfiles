@@ -187,6 +187,13 @@ fi
 git config --global ghq.root ~/work
 git config --global core.editor 'vim -c "set fenc=utf-8"'
 
+# Surface this dotfiles checkout to ghq. The repo lives at ~/dotfiles for
+# historical / convention reasons, but ghq only walks ghq.root (~/work/),
+# so without this link `ghq list` doesn't see it. A symlink is enough —
+# ghq will list it without trying to follow.
+mkdir -p ~/work
+[ ! -e ~/work/dotfiles ] && ln -s ~/dotfiles ~/work/dotfiles
+
 # Claude Code configuration
 echo "Setting up Claude Code..."
 
