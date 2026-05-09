@@ -68,6 +68,11 @@ the IME-pad focus hand-off) is a no-op there.
 
 - **Editing `.config/nvim/lua/plugins/*.lua`** — Neovim doesn't pick up
   changes in already-running sessions; restart `nvim` to see them.
+  `lua/config/*.lua` (e.g. `neovide.lua`) is symlinked the same way and
+  loads earlier than plugin specs — anything that has to be set before
+  lazy.nvim starts (neovide font, etc.) belongs there, required from
+  `~/.config/nvim/lua/config/options.lua` (LazyVim template, not in
+  dotfiles, so the require line has to be added by hand on each host).
 
 - **Renaming or deleting a tracked file** — check whether `install.sh`
   references it. Deleting a symlink target without removing the

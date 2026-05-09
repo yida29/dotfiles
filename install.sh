@@ -215,10 +215,10 @@ fi
 # when nvim first runs; we just make sure our custom plugin specs are
 # there to be picked up).
 # -----------------------------------------------------------------------------
-mkdir -p ~/.config/nvim/lua/plugins
+mkdir -p ~/.config/nvim/lua/plugins ~/.config/nvim/lua/config
 
 # Remove orphaned symlinks first
-for link in ~/.config/nvim/lua/plugins/*.lua; do
+for link in ~/.config/nvim/lua/plugins/*.lua ~/.config/nvim/lua/config/*.lua; do
   if [ -L "$link" ] && [ ! -e "$link" ]; then
     rm "$link"
   fi
@@ -227,6 +227,14 @@ done
 for plugin in ~/dotfiles/.config/nvim/lua/plugins/*.lua; do
   if [ -f "$plugin" ]; then
     ln -sf "$plugin" ~/.config/nvim/lua/plugins/"$(basename "$plugin")"
+  fi
+done
+# lua/config/ holds dotfiles-managed config snippets that need to load before
+# lazy.nvim (e.g. neovide GUI font). lua/config/options.lua itself stays in
+# the LazyVim template and is responsible for `require`ing these.
+for cfg in ~/dotfiles/.config/nvim/lua/config/*.lua; do
+  if [ -f "$cfg" ]; then
+    ln -sf "$cfg" ~/.config/nvim/lua/config/"$(basename "$cfg")"
   fi
 done
 
