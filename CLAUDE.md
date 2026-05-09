@@ -68,11 +68,17 @@ the IME-pad focus hand-off) is a no-op there.
 
 - **Editing `.config/nvim/lua/plugins/*.lua`** — Neovim doesn't pick up
   changes in already-running sessions; restart `nvim` to see them.
-  `lua/config/*.lua` (e.g. `neovide.lua`) is symlinked the same way and
-  loads earlier than plugin specs — anything that has to be set before
-  lazy.nvim starts (neovide font, etc.) belongs there, required from
+  `lua/config/*.lua` (e.g. `neovide.lua`, `clipboard.lua`) is symlinked
+  the same way and loads earlier than plugin specs — anything that has to
+  be set before lazy.nvim starts (neovide font, OSC 52 clipboard
+  override, etc.) belongs there, required from
   `~/.config/nvim/lua/config/options.lua` (LazyVim template, not in
   dotfiles, so the require line has to be added by hand on each host).
+  `clipboard.lua` no-ops on local hosts and only kicks in over SSH; the
+  full OSC 52 path also needs `set-clipboard on` + `allow-passthrough on`
+  on every tmux layer (already in `tmux/tmux.conf`, but `home2`'s tmux
+  3.2a skips passthrough — OSC 52 from inside a nested tmux there will
+  not reach the outer terminal).
 
 - **Renaming or deleting a tracked file** — check whether `install.sh`
   references it. Deleting a symlink target without removing the
