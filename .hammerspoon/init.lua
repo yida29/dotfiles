@@ -142,18 +142,28 @@ hs.urlevent.bind(COMMIT_URL, function()
 end)
 
 -- -----------------------------------------------------------------------------
--- Auto-reload when this file changes. Pinned on _G for the same reason
--- as the watchers above.
--- -----------------------------------------------------------------------------
-_G.imeConfigWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/",
-  function(files)
-    for _, file in ipairs(files) do
-      if file:match("%.lua$") then
-        hs.reload()
-        return
-      end
+-- Auto-reload when this file changes. We watch BOTH paths because
+-- ~/.hammerspoon/ is just a symlink to the dotfiles tree on most hosts;
+-- macOS pathwatcher follows the symlink for ~/.hammerspoon, but doesn't
+-- pick up `git pull` modifications to the underlying repo unless we also
+-- watch the dotfiles path explicitly. Pinned on _G to survive Lua GC.
+local function reloadOnLua(files)
+  for _, file in ipairs(files) do
+    if file:match("%.lua$") then
+      hs.reload()
+      return
     end
-  end)
+  end
+end
+
+_G.imeConfigWatcher = hs.pathwatcher.new(
+  os.getenv("HOME") .. "/.hammerspoon/", reloadOnLua)
 _G.imeConfigWatcher:start()
+
+local dotfilesPath = os.getenv("HOME") .. "/dotfiles/.hammerspoon/"
+if hs.fs.attributes(dotfilesPath) then
+  _G.imeDotfilesWatcher = hs.pathwatcher.new(dotfilesPath, reloadOnLua)
+  _G.imeDotfilesWatcher:start()
+end
 
 hs.alert.show("Hammerspoon ready")
