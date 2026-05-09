@@ -1,0 +1,122 @@
+" Run with:
+"   ~/.vim/pack/plugins/start/vim-themis/bin/themis ~/dotfiles/.vim/test/
+"
+" Tests for autoload/vim_ime.vim. Pure-input/output functions only — no
+" dependence on plugins, buffers, or running mode.
+
+let s:suite = themis#suite('vim_ime')
+let s:assert = themis#helper('assert')
+
+" -----------------------------------------------------------------------------
+" mode_label
+" -----------------------------------------------------------------------------
+function! s:suite.mode_label_normal() abort
+  let l:r = vim_ime#mode_label('n')
+  call s:assert.equals(l:r.label, '  普 ')
+  call s:assert.equals(l:r.hl, 'StatusModeN')
+endfunction
+
+function! s:suite.mode_label_insert() abort
+  let l:r = vim_ime#mode_label('i')
+  call s:assert.equals(l:r.label, '  入 ')
+  call s:assert.equals(l:r.hl, 'StatusModeI')
+endfunction
+
+function! s:suite.mode_label_visual_charwise() abort
+  let l:r = vim_ime#mode_label('v')
+  call s:assert.equals(l:r.label, '  選 ')
+  call s:assert.equals(l:r.hl, 'StatusModeV')
+endfunction
+
+function! s:suite.mode_label_visual_linewise() abort
+  let l:r = vim_ime#mode_label('V')
+  call s:assert.equals(l:r.label, '  選 ')
+  call s:assert.equals(l:r.hl, 'StatusModeV')
+endfunction
+
+function! s:suite.mode_label_visual_blockwise() abort
+  let l:r = vim_ime#mode_label("\<C-v>")
+  call s:assert.equals(l:r.label, '  選 ')
+  call s:assert.equals(l:r.hl, 'StatusModeV')
+endfunction
+
+function! s:suite.mode_label_replace() abort
+  let l:r = vim_ime#mode_label('R')
+  call s:assert.equals(l:r.label, '  換 ')
+  call s:assert.equals(l:r.hl, 'StatusModeR')
+endfunction
+
+function! s:suite.mode_label_command() abort
+  let l:r = vim_ime#mode_label('c')
+  call s:assert.equals(l:r.label, '  令 ')
+  call s:assert.equals(l:r.hl, 'StatusModeC')
+endfunction
+
+function! s:suite.mode_label_unknown_falls_back_to_normal_hl() abort
+  let l:r = vim_ime#mode_label('t')
+  " Unknown modes echo the raw mode char and link back to StatusModeN.
+  call s:assert.equals(l:r.label, '  t ')
+  call s:assert.equals(l:r.hl, 'StatusModeN')
+endfunction
+
+" -----------------------------------------------------------------------------
+" mode_arrow_color
+" -----------------------------------------------------------------------------
+function! s:suite.mode_arrow_color_per_mode() abort
+  call s:assert.equals(vim_ime#mode_arrow_color('n'), '#f39800')
+  call s:assert.equals(vim_ime#mode_arrow_color('i'), '#f4b3c2')
+  call s:assert.equals(vim_ime#mode_arrow_color('v'), '#e2041b')
+  call s:assert.equals(vim_ime#mode_arrow_color('V'), '#e2041b')
+  call s:assert.equals(vim_ime#mode_arrow_color("\<C-v>"), '#e2041b')
+  call s:assert.equals(vim_ime#mode_arrow_color('R'), '#eb6101')
+  call s:assert.equals(vim_ime#mode_arrow_color('c'), '#f7c114')
+endfunction
+
+function! s:suite.mode_arrow_color_unknown_defaults_to_normal() abort
+  call s:assert.equals(vim_ime#mode_arrow_color('t'), '#f39800')
+  call s:assert.equals(vim_ime#mode_arrow_color(''),  '#f39800')
+endfunction
+
+" -----------------------------------------------------------------------------
+" skk_label
+" -----------------------------------------------------------------------------
+function! s:suite.skk_label_disabled() abort
+  call s:assert.equals(vim_ime#skk_label(0, ''),     ' 󰊠 英 ')
+  call s:assert.equals(vim_ime#skk_label(0, 'hira'), ' 󰊠 英 ')
+endfunction
+
+function! s:suite.skk_label_hira() abort
+  call s:assert.equals(vim_ime#skk_label(1, 'hira'), ' 󰊠 あ ')
+endfunction
+
+function! s:suite.skk_label_kata() abort
+  call s:assert.equals(vim_ime#skk_label(1, 'kata'), ' 󰊠 ア ')
+endfunction
+
+function! s:suite.skk_label_hankata() abort
+  call s:assert.equals(vim_ime#skk_label(1, 'hankata'), ' 󰊠 ｱ ')
+endfunction
+
+function! s:suite.skk_label_abbrev() abort
+  call s:assert.equals(vim_ime#skk_label(1, 'abbrev'), ' 󰊠 ab ')
+endfunction
+
+function! s:suite.skk_label_unknown_mode_passes_through() abort
+  call s:assert.equals(vim_ime#skk_label(1, 'foo'), ' 󰊠 foo ')
+endfunction
+
+" -----------------------------------------------------------------------------
+" needs_trailing_blank
+" -----------------------------------------------------------------------------
+function! s:suite.needs_trailing_blank_empty_buffer() abort
+  call s:assert.false(vim_ime#needs_trailing_blank([]))
+endfunction
+
+function! s:suite.needs_trailing_blank_last_line_empty() abort
+  call s:assert.false(vim_ime#needs_trailing_blank(['hello', '']))
+endfunction
+
+function! s:suite.needs_trailing_blank_last_line_filled() abort
+  call s:assert.true(vim_ime#needs_trailing_blank(['hello']))
+  call s:assert.true(vim_ime#needs_trailing_blank(['', 'hello']))
+endfunction

@@ -40,9 +40,30 @@ fi
 if [ ! -d "$VIM_PACK/skkeleton" ]; then
   git clone --depth 1 https://github.com/vim-skk/skkeleton "$VIM_PACK/skkeleton"
 fi
-if [ ! -d "$VIM_PACK/kanagawa.nvim" ]; then
-  git clone --depth 1 https://github.com/rebelot/kanagawa.nvim "$VIM_PACK/kanagawa.nvim"
+# Japanese-traditional-color schemes (sabineko, etc).
+if [ ! -d "$VIM_PACK/azuma-vim-colorschemes" ]; then
+  git clone --depth 1 https://github.com/azumakuniyuki/vim-colorschemes "$VIM_PACK/azuma-vim-colorschemes"
+  # The repo ships colorschemes at the top level; Vim's :h packages
+  # mechanism only picks up colors/ subdirectories.
+  if [ ! -d "$VIM_PACK/azuma-vim-colorschemes/colors" ]; then
+    mkdir -p "$VIM_PACK/azuma-vim-colorschemes/colors"
+    mv "$VIM_PACK/azuma-vim-colorschemes/"*.vim "$VIM_PACK/azuma-vim-colorschemes/colors/" 2>/dev/null
+  fi
 fi
+if [ ! -d "$VIM_PACK/momiji" ]; then
+  git clone --depth 1 https://github.com/kyoh86/momiji "$VIM_PACK/momiji"
+fi
+# Test runner for autoload/vim_ime.vim. Run with:
+#   ~/.vim/pack/plugins/start/vim-themis/bin/themis ~/dotfiles/.vim/test/
+if [ ! -d "$VIM_PACK/vim-themis" ]; then
+  git clone --depth 1 https://github.com/thinca/vim-themis "$VIM_PACK/vim-themis"
+fi
+
+# autoload/test files for vim-ime are tracked in dotfiles. Symlink them
+# into ~/.vim/ so Vim's :h packages mechanism finds them.
+mkdir -p "$HOME/.vim/autoload" "$HOME/.vim/test"
+ln -sf "$HOME/dotfiles/.vim/autoload/vim_ime.vim" "$HOME/.vim/autoload/vim_ime.vim"
+ln -sf "$HOME/dotfiles/.vim/test/vim_ime.vimspec" "$HOME/.vim/test/vim_ime.vimspec"
 
 # Hammerspoon (macOS only): used for nvim-ime → previous-app paste hand-off
 if [[ "$OSTYPE" == "darwin"* ]]; then

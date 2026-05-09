@@ -128,23 +128,9 @@ set statusline+=%#StatusClock#\ %{g:vim_ime_clock_icon}\ %{strftime('%H:%M')}\ %
 " change. This avoids calling skkeleton functions from the statusline
 " expression on every cursor movement.
 function! s:refresh_skk_mode() abort
-  " 󰊠 (nf-md-translate) suggests "this is the language toggle".
-  if !exists('g:loaded_skkeleton') || !skkeleton#is_enabled()
-    let g:vim_ime_skk_mode = ' 󰊠 英 '
-    return
-  endif
-  let l:m = skkeleton#mode()
-  if l:m ==# 'hira'
-    let g:vim_ime_skk_mode = ' 󰊠 あ '
-  elseif l:m ==# 'kata'
-    let g:vim_ime_skk_mode = ' 󰊠 ア '
-  elseif l:m ==# 'hankata'
-    let g:vim_ime_skk_mode = ' 󰊠 ｱ '
-  elseif l:m ==# 'abbrev'
-    let g:vim_ime_skk_mode = ' 󰊠 ab '
-  else
-    let g:vim_ime_skk_mode = ' 󰊠 ' . l:m . ' '
-  endif
+  let l:enabled = exists('g:loaded_skkeleton') && skkeleton#is_enabled()
+  let l:mode = l:enabled ? skkeleton#mode() : ''
+  let g:vim_ime_skk_mode = vim_ime#skk_label(l:enabled, l:mode)
 endfunction
 
 augroup vim_ime_skk_mode_cache
@@ -160,29 +146,12 @@ augroup END
 " Update both the mode label string and the StatusLine highlight on every
 " mode change. Reading a pre-computed string in the statusline is much
 " cheaper than calling mode() inside %{...}.
-" The mode chip is `<vim icon> <kanji>` for that fish-prompt feel; the
-" icon needs a Nerd Font (provided by JetBrainsMono Nerd Font in iTerm2).
+" The pure mapping (mode -> {label, hl}) lives in autoload/vim_ime.vim
+" so it can be unit-tested.
 function! s:refresh_mode() abort
-  let l:m = mode()
-  if l:m ==# 'n'
-    let g:vim_ime_mode_label = '  普 '
-    highlight! link StatusLine StatusModeN
-  elseif l:m ==# 'i'
-    let g:vim_ime_mode_label = '  入 '
-    highlight! link StatusLine StatusModeI
-  elseif l:m ==# 'v' || l:m ==# 'V' || l:m ==# "\<C-v>"
-    let g:vim_ime_mode_label = '  選 '
-    highlight! link StatusLine StatusModeV
-  elseif l:m ==# 'R'
-    let g:vim_ime_mode_label = '  換 '
-    highlight! link StatusLine StatusModeR
-  elseif l:m ==# 'c'
-    let g:vim_ime_mode_label = '  令 '
-    highlight! link StatusLine StatusModeC
-  else
-    let g:vim_ime_mode_label = '  ' . l:m . ' '
-    highlight! link StatusLine StatusModeN
-  endif
+  let l:info = vim_ime#mode_label(mode())
+  let g:vim_ime_mode_label = l:info.label
+  execute 'highlight! link StatusLine ' . l:info.hl
 endfunction
 
 augroup vim_ime_mode_refresh
@@ -242,24 +211,11 @@ function! s:apply_status_highlights() abort
 endfunction
 
 " Sep1 needs its fg to track whichever color the current mode chip uses.
-" Re-define on every mode change.
+" Re-define on every mode change. The mode -> color mapping lives in
+" autoload/vim_ime.vim.
 function! s:refresh_sep1_color() abort
-  let l:skk_bg = '#3f312b'
-  let l:m = mode()
-  if l:m ==# 'n'
-    let l:fg = '#f39800'
-  elseif l:m ==# 'i'
-    let l:fg = '#f4b3c2'
-  elseif l:m ==# 'v' || l:m ==# 'V' || l:m ==# "\<C-v>"
-    let l:fg = '#e2041b'
-  elseif l:m ==# 'R'
-    let l:fg = '#eb6101'
-  elseif l:m ==# 'c'
-    let l:fg = '#f7c114'
-  else
-    let l:fg = '#f39800'
-  endif
-  execute 'highlight! StatusSep1 guifg=' . l:fg . ' guibg=' . l:skk_bg . ' gui=bold'
+  let l:fg = vim_ime#mode_arrow_color(mode())
+  execute 'highlight! StatusSep1 guifg=' . l:fg . ' guibg=#3f312b gui=bold'
 endfunction
 
 augroup vim_ime_status_colors
@@ -338,9 +294,8 @@ cmap <C-j> <Plug>(skkeleton-enable)
 " Helpers.
 " -----------------------------------------------------------------------------
 function! s:ensure_trailing_blank_line() abort
-  let last = line('$')
-  if last > 0 && getline(last) !=# ''
-    call append(last, '')
+  if vim_ime#needs_trailing_blank(getline(1, '$'))
+    call append(line('$'), '')
   endif
 endfunction
 
