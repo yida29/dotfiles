@@ -174,15 +174,9 @@ if [ ! -f ~/.skk/SKK-JISYO.L ]; then
   curl -L https://skk-dev.github.io/dict/SKK-JISYO.L.gz | gunzip > ~/.skk/SKK-JISYO.L
 fi
 
-# Link skkeleton user dictionary (shared across hosts via dotfiles)
-if [ -f ~/dotfiles/.skk/userJisyo ]; then
-  if [ -e ~/.skkeleton ] && [ ! -L ~/.skkeleton ]; then
-    # Existing real file: merge into dotfiles version then back up
-    echo "Merging existing ~/.skkeleton into dotfiles..."
-    mv ~/.skkeleton ~/.skkeleton.local-backup-$(date +%Y%m%d_%H%M%S)
-  fi
-  ln -sf ~/dotfiles/.skk/userJisyo ~/.skkeleton
-fi
+# skkeleton creates ~/.skkeleton on first save; we no longer share it
+# across hosts via dotfiles (it's in .gitignore now). Each host keeps
+# its own learning.
 
 git config --global ghq.root ~/work
 git config --global core.editor 'vim -c "set fenc=utf-8"'

@@ -3,3 +3,9 @@
 # track them.
 .hammerspoon/Spoons/EmmyLua.spoon/annotations/
 
+# skkeleton's user dictionary. It changes every time SKK learns a new
+# conversion, so tracking it left every git status permanently dirty
+# and every commit polluted with unrelated entries. Each host now keeps
+# its own learning rather than sharing it through dotfiles.
+.skk/userJisyo
+
