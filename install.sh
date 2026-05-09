@@ -1,4 +1,12 @@
 #!/bin/bash
+#
+# install.sh — bootstrap a fresh host into the dotfiles fleet.
+#
+# Idempotent: re-running on an already-set-up host should be a no-op.
+# Cross-platform: macOS uses Homebrew, Linux uses apt + curl-installed
+# binaries dropped into ~/.local/bin.
+
+set -e
 
 # -----------------------------------------------------------------------------
 # Constants
@@ -8,38 +16,160 @@
 # we can scope per-profile defaults like NeverWarnAboutShortLivedSessions.
 ITERM2_JAPANESE_PROFILE_GUID="B21BB39C-36F0-4C5D-A289-1E33C172D5D3"
 
-if [[ "$OSTYPE" != "msys" ]]; then
-ln -sf ~/dotfiles/.vimrc ~/.vimrc
-ln -sf ~/dotfiles/.ctags ~/.ctags
-ln -sf ~/dotfiles/.ctags.d ~/.ctags.d
+case "$OSTYPE" in
+  darwin*) OS=macos ;;
+  linux*)  OS=linux ;;
+  msys*)   OS=windows ;;
+  *)       OS=unknown ;;
+esac
+
+# -----------------------------------------------------------------------------
+# Tool installation helpers.
+#
+# Every tool we need either ships in the OS package manager (brew on macOS,
+# apt on Debian/Ubuntu) or has a documented install script that lands a
+# binary in ~/.local/bin. install_tool dispatches to the right one.
+#
+# Already-installed tools are left alone. We deliberately don't try to
+# upgrade — homebrew users already have `brew upgrade`, apt users
+# already have `apt upgrade`, and we don't want to surprise either.
+# -----------------------------------------------------------------------------
+mkdir -p ~/.local/bin
+
+# Make sure ~/.local/bin and ~/.cargo/bin are visible to *this script*'s
+# subshells, so command -v finds binaries we just installed.
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+
+install_via_brew() {  # $1 = formula
+  if [[ "$OS" == macos ]] && command -v brew >/dev/null; then
+    brew install "$1"
+    return 0
+  fi
+  return 1
+}
+
+install_via_apt() {  # $1 = package
+  if [[ "$OS" == linux ]] && command -v apt >/dev/null; then
+    sudo apt install -y "$1"
+    return 0
+  fi
+  return 1
+}
+
+install_starship() {
+  command -v starship >/dev/null && return 0
+  echo "Installing starship..."
+  if install_via_brew starship; then return; fi
+  # Linux: official installer, scoped to ~/.local/bin.
+  curl -sS https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.local/bin"
+}
+
+install_ghq() {
+  command -v ghq >/dev/null && return 0
+  echo "Installing ghq..."
+  if install_via_brew ghq; then return; fi
+  # Linux: prebuilt binary tarball release.
+  local arch="amd64"
+  [[ "$(uname -m)" == "aarch64" ]] && arch="arm64"
+  local tmp; tmp=$(mktemp -d)
+  curl -fsSL "https://github.com/x-motemen/ghq/releases/latest/download/ghq_linux_${arch}.zip" -o "$tmp/ghq.zip"
+  (cd "$tmp" && unzip -q ghq.zip && mv ghq_linux_${arch}/ghq "$HOME/.local/bin/")
+  rm -rf "$tmp"
+}
+
+install_fzf() {
+  command -v fzf >/dev/null && return 0
+  echo "Installing fzf..."
+  if install_via_brew fzf; then return; fi
+  if install_via_apt fzf; then return; fi
+}
+
+install_delta() {
+  command -v delta >/dev/null && return 0
+  echo "Installing delta..."
+  if install_via_brew git-delta; then return; fi
+  # Linux: prebuilt .deb from the upstream release. apt has it too on
+  # newer Ubuntu, but Jammy / WSL2 default repos don't.
+  if [[ "$OS" == linux ]]; then
+    if install_via_apt git-delta; then return; fi
+    local arch="amd64"
+    [[ "$(uname -m)" == "aarch64" ]] && arch="arm64"
+    local ver="0.18.2"
+    local tmp; tmp=$(mktemp -d)
+    curl -fsSL "https://github.com/dandavison/delta/releases/download/${ver}/delta-${ver}-x86_64-unknown-linux-gnu.tar.gz" -o "$tmp/delta.tgz"
+    (cd "$tmp" && tar xzf delta.tgz && mv "delta-${ver}-x86_64-unknown-linux-gnu/delta" "$HOME/.local/bin/")
+    rm -rf "$tmp"
+  fi
+}
+
+install_deno() {
+  command -v deno >/dev/null && return 0
+  echo "Installing deno..."
+  if install_via_brew deno; then return; fi
+  curl -fsSL https://deno.land/install.sh | sh
+  if [ -x "$HOME/.deno/bin/deno" ]; then
+    ln -sf "$HOME/.deno/bin/deno" "$HOME/.local/bin/deno"
+  fi
+}
+
+install_jq() {
+  command -v jq >/dev/null && return 0
+  echo "Installing jq..."
+  if install_via_brew jq; then return; fi
+  if install_via_apt jq; then return; fi
+  if [[ "$OS" == linux ]] && command -v yum >/dev/null; then
+    sudo yum install -y jq
+    return
+  fi
+  echo "Warning: don't know how to install jq on this OS"
+}
+
+# -----------------------------------------------------------------------------
+# Symlink config files
+# -----------------------------------------------------------------------------
+if [[ "$OS" != windows ]]; then
+  ln -sf ~/dotfiles/.vimrc ~/.vimrc
+  ln -sf ~/dotfiles/.ctags ~/.ctags
+  ln -sf ~/dotfiles/.ctags.d ~/.ctags.d
 fi
 ln -sf ~/dotfiles/zsh/.zshrc ~/.zshrc
+
 mkdir -p ~/.config/ghostty
 ln -sf ~/dotfiles/ghostty/config ~/.config/ghostty/config
+
 mkdir -p ~/.config/tmux
 ln -sf ~/dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
-# Also create ~/.tmux.conf symlink for tmux-sensible plugin compatibility
+# tmux-sensible expects ~/.tmux.conf
 ln -sf ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
-mkdir -p "$HOME/Library/Application Support/lazygit"
-ln -sf ~/dotfiles/lazygit/config.yml "$HOME/Library/Application Support/lazygit/config.yml"
+
+# lazygit config — only macOS path because the Linux config dir is
+# ~/.config/lazygit/ and we don't currently need that.
+if [[ "$OS" == macos ]]; then
+  mkdir -p "$HOME/Library/Application Support/lazygit"
+  ln -sf ~/dotfiles/lazygit/config.yml "$HOME/Library/Application Support/lazygit/config.yml"
+else
+  mkdir -p "$HOME/.config/lazygit"
+  ln -sf ~/dotfiles/lazygit/config.yml "$HOME/.config/lazygit/config.yml"
+fi
+
 mkdir -p ~/.config/fish/functions
 ln -sf ~/dotfiles/fish/config.fish ~/.config/fish/config.fish
 ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_prompt.fish
 
-mkdir -p ~/.local/bin
 ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
 
-# Vim is used as a SKK-only IME pad (~/.vimrc handles the wiring). Plugins
-# live in ~/.vim/pack/plugins/start/ and are loaded by Vim's native
-# :h packages mechanism, so we just clone the upstream repos.
+# -----------------------------------------------------------------------------
+# Vim-ime (SKK Japanese-input pad). Plugins live under
+# ~/.vim/pack/plugins/start/ and are loaded by Vim's native :h packages
+# mechanism.
+# -----------------------------------------------------------------------------
 VIM_PACK="$HOME/.vim/pack/plugins/start"
 mkdir -p "$VIM_PACK"
-if [ ! -d "$VIM_PACK/denops.vim" ]; then
-  git clone --depth 1 https://github.com/vim-denops/denops.vim "$VIM_PACK/denops.vim"
-fi
-if [ ! -d "$VIM_PACK/skkeleton" ]; then
-  git clone --depth 1 https://github.com/vim-skk/skkeleton "$VIM_PACK/skkeleton"
-fi
+[ ! -d "$VIM_PACK/denops.vim" ] \
+  && git clone --depth 1 https://github.com/vim-denops/denops.vim "$VIM_PACK/denops.vim"
+[ ! -d "$VIM_PACK/skkeleton" ] \
+  && git clone --depth 1 https://github.com/vim-skk/skkeleton "$VIM_PACK/skkeleton"
+
 # Japanese-traditional-color schemes (sabineko, etc).
 if [ ! -d "$VIM_PACK/azuma-vim-colorschemes" ]; then
   git clone --depth 1 https://github.com/azumakuniyuki/vim-colorschemes "$VIM_PACK/azuma-vim-colorschemes"
@@ -47,17 +177,14 @@ if [ ! -d "$VIM_PACK/azuma-vim-colorschemes" ]; then
   # mechanism only picks up colors/ subdirectories.
   if [ ! -d "$VIM_PACK/azuma-vim-colorschemes/colors" ]; then
     mkdir -p "$VIM_PACK/azuma-vim-colorschemes/colors"
-    mv "$VIM_PACK/azuma-vim-colorschemes/"*.vim "$VIM_PACK/azuma-vim-colorschemes/colors/" 2>/dev/null
+    mv "$VIM_PACK/azuma-vim-colorschemes/"*.vim "$VIM_PACK/azuma-vim-colorschemes/colors/" 2>/dev/null || true
   fi
 fi
-if [ ! -d "$VIM_PACK/momiji" ]; then
-  git clone --depth 1 https://github.com/kyoh86/momiji "$VIM_PACK/momiji"
-fi
-# Test runner for autoload/vim_ime.vim. Run with:
-#   ~/.vim/pack/plugins/start/vim-themis/bin/themis ~/dotfiles/.vim/test/
-if [ ! -d "$VIM_PACK/vim-themis" ]; then
-  git clone --depth 1 https://github.com/thinca/vim-themis "$VIM_PACK/vim-themis"
-fi
+[ ! -d "$VIM_PACK/momiji" ] \
+  && git clone --depth 1 https://github.com/kyoh86/momiji "$VIM_PACK/momiji"
+# Test runner for autoload/vim_ime.vim.
+[ ! -d "$VIM_PACK/vim-themis" ] \
+  && git clone --depth 1 https://github.com/thinca/vim-themis "$VIM_PACK/vim-themis"
 
 # autoload/test files for vim-ime are tracked in dotfiles. Symlink them
 # into ~/.vim/ so Vim's :h packages mechanism finds them.
@@ -65,168 +192,111 @@ mkdir -p "$HOME/.vim/autoload" "$HOME/.vim/test"
 ln -sf "$HOME/dotfiles/.vim/autoload/vim_ime.vim" "$HOME/.vim/autoload/vim_ime.vim"
 ln -sf "$HOME/dotfiles/.vim/test/vim_ime.vimspec" "$HOME/.vim/test/vim_ime.vimspec"
 
-# Hammerspoon (macOS only): used for nvim-ime → previous-app paste hand-off
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  if ! [ -d "/Applications/Hammerspoon.app" ]; then
+# -----------------------------------------------------------------------------
+# macOS-only desktop integration
+# -----------------------------------------------------------------------------
+if [[ "$OS" == macos ]]; then
+  # Hammerspoon: nvim-ime → previous-app paste hand-off
+  if [ ! -d "/Applications/Hammerspoon.app" ]; then
     echo "Installing Hammerspoon..."
     brew install --cask hammerspoon
   fi
   ln -sf ~/dotfiles/.hammerspoon ~/.hammerspoon
-fi
 
-# iTerm2 (macOS only): point preferences to dotfiles for cross-host sync.
-# Note: NeverWarnAboutShortLivedSessions_<GUID> doesn't get written to the
-# shared plist, so we set it per-host here. Without it, the "Japanese Input"
-# profile (which :qa!s on commit) triggers iTerm2's "session ended very soon"
-# dialog every time.
-if [[ "$OSTYPE" == "darwin"* ]]; then
+  # iTerm2: PrefsCustomFolder + per-profile defaults that don't sync via
+  # the shared plist. Without this, the "Japanese Input" profile (which
+  # :qa!s on commit) triggers iTerm2's "session ended very soon" dialog
+  # every time.
   defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/iterm2"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
   defaults write com.googlecode.iterm2 \
     "NeverWarnAboutShortLivedSessions_${ITERM2_JAPANESE_PROFILE_GUID}" -bool true
 fi
 
-# AstroNvim installation
-# Only install AstroNvim if it doesn't exist
-if [ ! -d ~/.config/nvim ]; then
-    echo "Installing AstroNvim..."
-    git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
-    rm -rf ~/.config/nvim/.git
-else
-    echo "AstroNvim already installed, skipping installation..."
-fi
-
-# Copy custom plugin configurations
-echo "Copying custom plugin configurations..."
+# -----------------------------------------------------------------------------
+# Neovim plugin symlinks (LazyVim is bootstrapped by lazy.nvim itself
+# when nvim first runs; we just make sure our custom plugin specs are
+# there to be picked up).
+# -----------------------------------------------------------------------------
 mkdir -p ~/.config/nvim/lua/plugins
 
 # Remove orphaned symlinks first
-echo "Removing orphaned plugin symlinks..."
 for link in ~/.config/nvim/lua/plugins/*.lua; do
-    if [ -L "$link" ] && [ ! -e "$link" ]; then
-        plugin_name=$(basename "$link")
-        rm "$link"
-        echo "Removed orphaned symlink: $plugin_name"
-    fi
+  if [ -L "$link" ] && [ ! -e "$link" ]; then
+    rm "$link"
+  fi
 done
-
 # Create symlinks for all custom plugins
 for plugin in ~/dotfiles/.config/nvim/lua/plugins/*.lua; do
-    if [ -f "$plugin" ]; then
-        plugin_name=$(basename "$plugin")
-        ln -sf "$plugin" ~/.config/nvim/lua/plugins/"$plugin_name"
-        echo "Linked $plugin_name"
-    fi
+  if [ -f "$plugin" ]; then
+    ln -sf "$plugin" ~/.config/nvim/lua/plugins/"$(basename "$plugin")"
+  fi
 done
 
-curl https://git.io/fisher --create-dirs -sLo ~/.config/fish/functions/fisher.fish
-curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+# -----------------------------------------------------------------------------
+# fish + tmux plugin managers
+# -----------------------------------------------------------------------------
+curl -fsSL https://git.io/fisher --create-dirs -o ~/.config/fish/functions/fisher.fish
 
-# Also install vim-plug for Neovim
-curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-
-# ~/.tmux/plugins/tpm を最新化するスクリプト
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
-  echo "TPM not found. Cloning..."
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-else
-  echo "TPM already exists. Updating..."
-  (cd ~/.tmux/plugins/tpm && git pull origin master)
 fi
 
-# Install ghq
-if ! command -v ghq &> /dev/null; then
-  echo "Installing ghq..."
-  brew install ghq
-fi
+# -----------------------------------------------------------------------------
+# CLI tools
+# -----------------------------------------------------------------------------
+install_starship
+install_ghq
+install_fzf
+install_delta
+install_deno
+install_jq
 
-# Install fzf
-if ! command -v fzf &> /dev/null; then
-  echo "Installing fzf..."
-  brew install fzf
-fi
-
-# Install delta (git pager for lazygit & git diff)
-if ! command -v delta &> /dev/null; then
-  echo "Installing delta..."
-  brew install git-delta
-fi
-
-# Install Deno (required by denops.vim for skkeleton)
-if ! command -v deno &> /dev/null; then
-  echo "Installing deno..."
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    brew install deno
-  else
-    curl -fsSL https://deno.land/install.sh | sh
-    # Symlink into ~/.local/bin so it picks up the existing PATH entry
-    if [ -x "$HOME/.deno/bin/deno" ]; then
-      mkdir -p "$HOME/.local/bin"
-      ln -sf "$HOME/.deno/bin/deno" "$HOME/.local/bin/deno"
-    fi
-  fi
-fi
-
-# Install SKK dictionary for skkeleton
+# -----------------------------------------------------------------------------
+# SKK dictionary for skkeleton (cross-host, OS-independent)
+# -----------------------------------------------------------------------------
 if [ ! -f ~/.skk/SKK-JISYO.L ]; then
   echo "Downloading SKK-JISYO.L..."
   mkdir -p ~/.skk
-  curl -L https://skk-dev.github.io/dict/SKK-JISYO.L.gz | gunzip > ~/.skk/SKK-JISYO.L
+  curl -fsSL https://skk-dev.github.io/dict/SKK-JISYO.L.gz | gunzip > ~/.skk/SKK-JISYO.L
 fi
-
 # skkeleton creates ~/.skkeleton on first save; we no longer share it
 # across hosts via dotfiles (it's in .gitignore now). Each host keeps
 # its own learning.
 
+# -----------------------------------------------------------------------------
+# Git config
+# -----------------------------------------------------------------------------
 git config --global ghq.root ~/work
 git config --global core.editor 'vim -c "set fenc=utf-8"'
 
-# Surface this dotfiles checkout to ghq. The repo lives at ~/dotfiles for
-# historical / convention reasons, but ghq only walks ghq.root (~/work/),
-# so without this link `ghq list` doesn't see it. A symlink is enough —
-# ghq will list it without trying to follow.
+# Surface this dotfiles checkout to ghq. The repo lives at ~/dotfiles
+# for historical / convention reasons, but ghq only walks ghq.root
+# (~/work/), so without this link `ghq list` doesn't see it.
 mkdir -p ~/work
 [ ! -e ~/work/dotfiles ] && ln -s ~/dotfiles ~/work/dotfiles
 
-# Claude Code configuration
-echo "Setting up Claude Code..."
-
-# Install jq (required for statusline.sh)
-if ! command -v jq &> /dev/null; then
-  echo "Installing jq..."
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    brew install jq
-  elif command -v apt &> /dev/null; then
-    sudo apt install -y jq
-  elif command -v yum &> /dev/null; then
-    sudo yum install -y jq
-  else
-    echo "Warning: Could not install jq. Please install it manually for statusline to work."
-  fi
-fi
-
+# -----------------------------------------------------------------------------
+# Claude Code
+# -----------------------------------------------------------------------------
 mkdir -p ~/.claude/output-styles
 ln -sf ~/dotfiles/.claude/settings.json ~/.claude/settings.json
 # settings.local.json contains machine-specific paths, so don't symlink it
 # Instead, copy as template if it doesn't exist
 if [ ! -f ~/.claude/settings.local.json ]; then
-  echo "Creating settings.local.json template (edit paths as needed)..."
   cp ~/dotfiles/.claude/settings.local.json ~/.claude/settings.local.json
 fi
 
-# Continuous-Claude: Set CLAUDE_OPC_DIR with absolute path in settings.local.json
-# XDG compliant location: ~/.local/share/continuous-claude/opc
+# Continuous-Claude: set CLAUDE_OPC_DIR if its data dir exists.
 if [ -d "$HOME/.local/share/continuous-claude/opc" ]; then
-  echo "Configuring Continuous-Claude OPC directory..."
-  # Add or update env.CLAUDE_OPC_DIR in settings.local.json
   tmp_file=$(mktemp)
   jq --arg opc_dir "$HOME/.local/share/continuous-claude/opc" \
     '.env = (.env // {}) | .env.CLAUDE_OPC_DIR = $opc_dir' \
     ~/.claude/settings.local.json > "$tmp_file" && mv "$tmp_file" ~/.claude/settings.local.json
 fi
+
 ln -sf ~/dotfiles/.claude/statusline.sh ~/.claude/statusline.sh
 chmod +x ~/dotfiles/.claude/statusline.sh
-# Output styles
 for style in ~/dotfiles/.claude/output-styles/*.md; do
   if [ -f "$style" ]; then
     ln -sf "$style" ~/.claude/output-styles/
