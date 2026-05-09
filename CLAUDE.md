@@ -29,7 +29,6 @@ behaviours that look fine but break in surprising ways if you guess.
                      repo) — touching it affects both.
 bin/                 Personal scripts (sshs is the only one right now).
 fish/, zsh/          Shell config. Both export EDITOR=nvim.
-ghostty/             Ghostty terminal config (rarely used).
 iterm2/              iTerm2 preferences plist. iTerm2 reads/writes here
                      via PrefsCustomFolder.
 lazygit/             Lazygit config.
