@@ -17,7 +17,7 @@
       "forward_port": 19293
     },
     "home2": {
-      "tailscale_name": "rogally-1",
+      "tailscale_name": "rogally",
       "color": "255 255 255",
       "forward_port": 19294
     }
