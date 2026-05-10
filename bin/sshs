@@ -45,44 +45,45 @@ HOSTS_JSON="$(find_hosts_json)" || {
 ALL_HOSTS="$(jq -r '.hosts | keys_unsorted | join(" ")' "$HOSTS_JSON")"
 DEFAULT_COLOR="$(jq -r '.default_color // "149 165 166"' "$HOSTS_JSON")"
 
-declare -A HOST_TS_NAME=()
-declare -A HOST_COLOR=()
-declare -A HOST_FWD_PORT=()
-while IFS=$'\t' read -r alias ts_name color fwd_port; do
-  [ -z "$alias" ] && continue
-  HOST_TS_NAME["$alias"]="$ts_name"
-  HOST_COLOR["$alias"]="$color"
-  [ "$fwd_port" != "null" ] && HOST_FWD_PORT["$alias"]="$fwd_port"
-done < <(jq -r '.hosts | to_entries[] | [.key, (.value.tailscale_name // ""), (.value.color // ""), (.value.forward_port // "null" | tostring)] | @tsv' "$HOSTS_JSON")
+# Per-host accessors. Each returns empty string if the field is missing
+# instead of erroring out. macOS's stock /bin/bash is 3.2 and lacks
+# associative arrays, so we keep all per-host data in hosts.json and look
+# it up on demand instead of caching into `declare -A`.
+host_field() { # $1 = alias, $2 = jq subexpression (e.g. .tailscale_name)
+  jq -r --arg a "$1" ".hosts[\$a] | $2 // \"\"" "$HOSTS_JSON"
+}
 
 # ── Detect which host we are running on ──
+alias_for_hostname() { # $1 = lowercase hostname; echoes alias or empty
+  jq -r --arg h "$1" '
+    .hosts | to_entries
+    | map(select((.value.tailscale_name // "" | ascii_downcase) == $h))
+    | .[0].key // ""
+  ' "$HOSTS_JSON"
+}
+
 get_self_alias() {
-  local ts_hostname
-  ts_hostname="$(hostname -s 2>/dev/null | tr '[:upper:]' '[:lower:]')"
-  for alias in $ALL_HOSTS; do
-    local ts_name="${HOST_TS_NAME[$alias]:-}"
-    if [[ -n "$ts_name" && "$ts_hostname" == "${ts_name,,}" ]]; then
-      echo "$alias"
-      return
-    fi
-  done
-  # Fallback: check Tailscale hostname directly
+  local h match
+  h="$(hostname -s 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+  match="$(alias_for_hostname "$h")"
+  if [ -n "$match" ]; then echo "$match"; return; fi
+
+  # Fallback: ask Tailscale itself.
   local ts_cmd=""
-  if command -v tailscale &>/dev/null; then
+  if command -v tailscale >/dev/null 2>&1; then
     ts_cmd="tailscale"
   elif [ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]; then
     ts_cmd="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
   fi
   if [ -n "$ts_cmd" ]; then
-    ts_hostname="$("$ts_cmd" status --self --json 2>/dev/null | grep -o '"HostName":"[^"]*"' | head -1 | cut -d'"' -f4 | tr '[:upper:]' '[:lower:]')"
-  fi
-  for alias in $ALL_HOSTS; do
-    local ts_name="${HOST_TS_NAME[$alias]:-}"
-    if [[ -n "$ts_name" && "$ts_hostname" == "${ts_name,,}" ]]; then
-      echo "$alias"
-      return
+    h="$("$ts_cmd" status --self --json 2>/dev/null \
+      | jq -r '.Self.HostName // ""' \
+      | tr '[:upper:]' '[:lower:]')"
+    if [ -n "$h" ]; then
+      match="$(alias_for_hostname "$h")"
+      [ -n "$match" ] && echo "$match"
     fi
-  done
+  fi
 }
 
 # ── Input validation ──
@@ -172,13 +173,21 @@ fi
 
 # ── Tab color ──
 get_color() {
-  echo "${HOST_COLOR[$1]:-$DEFAULT_COLOR}"
+  local c
+  c="$(host_field "$1" .color)"
+  if [ -n "$c" ]; then echo "$c"; else echo "$DEFAULT_COLOR"; fi
 }
 
 # ── Build SSH options string ──
 # User-supplied -L / -J apply to every host. The per-host default -L (cargo
 # doc port, etc.) is computed inside the loop so it can vary by host.
-common_opts_str="${ssh_opts[*]}"
+# bash 3.2 (Apple's /bin/bash) errors on ${arr[*]} when the array was
+# never assigned to, even with default substitution, so guard the read.
+if [ "${#ssh_opts[@]}" -gt 0 ]; then
+  common_opts_str="${ssh_opts[*]}"
+else
+  common_opts_str=""
+fi
 if [ -n "$jump_host" ]; then
   common_opts_str="-J ${jump_host}${common_opts_str:+ ${common_opts_str}}"
 fi
@@ -186,7 +195,7 @@ fi
 # ── Open tabs ──
 for host in "${hosts[@]}"; do
   read -r r g b <<< "$(get_color "$host")"
-  fwd_port="${HOST_FWD_PORT[$host]:-}"
+  fwd_port="$(host_field "$host" .forward_port)"
   ssh_cmd="ssh"
   if [ -n "$fwd_port" ]; then
     ssh_cmd="${ssh_cmd} -L ${fwd_port}:localhost:${fwd_port}"
