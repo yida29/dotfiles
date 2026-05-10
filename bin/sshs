@@ -216,4 +216,7 @@ tell application \"iTerm2\"
   end tell
 end tell
 "
+  # iTerm2's `tell current window` racey-ly drops tabs when osascript
+  # invocations land back-to-back; pace them out a hair.
+  sleep 0.25
 done
