@@ -1,0 +1,33 @@
+# systemd --user unit for the per-host static doc server.
+#
+# Listens on 127.0.0.1:<host port> only; browsers reach it via the
+# ssh -L tunnel that `sshs` already opens. See bin/docserver for the
+# port/root resolution and config/sshs/hosts.json for the registry.
+#
+# Symlinked to ~/.config/systemd/user/docserver.service by install.sh.
+# Manage with:
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now docserver.service
+#   systemctl --user status docserver.service
+#   journalctl --user -u docserver.service -f
+
+[Unit]
+Description=Per-host static doc server (sshs companion)
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/docserver
+Restart=always
+RestartSec=5
+# Belt-and-suspenders: even though docserver itself binds to 127.0.0.1,
+# disable IPv4 binding to non-localhost addresses at the namespace
+# level. ProtectSystem keeps the unit from writing into /usr etc.
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+# Allow reading $HOME/work; ProtectHome=read-only already covers it.
+
+[Install]
+WantedBy=default.target

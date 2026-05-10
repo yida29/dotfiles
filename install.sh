@@ -162,12 +162,43 @@ ln -sf ~/dotfiles/fish/config.fish ~/.config/fish/config.fish
 ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_prompt.fish
 
 ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
+ln -sf ~/dotfiles/bin/docserver ~/.local/bin/docserver
 
 # sshs reads its host registry (aliases, tab colors, default forward
 # ports, Tailscale names) from ~/.config/sshs/hosts.json. Same file on
 # every host — sshs itself is a thin reader.
 mkdir -p ~/.config/sshs
 ln -sf ~/dotfiles/config/sshs/hosts.json ~/.config/sshs/hosts.json
+
+# Per-host static doc server (companion to sshs). Lifecycle managed by
+# launchd on macOS, systemd --user on Linux. The service ExecStart's
+# ~/.local/bin/docserver, which reads its port/root from hosts.json
+# above. Bind is hardcoded to 127.0.0.1 inside docserver itself.
+#
+# We need ~/work to exist (the default doc root) before starting the
+# service, otherwise it errors out.
+mkdir -p "$HOME/work"
+
+if [[ "$OS" == macos ]]; then
+  mkdir -p ~/Library/LaunchAgents
+  ln -sf ~/dotfiles/config/launchd/com.yida.docserver.plist \
+    ~/Library/LaunchAgents/com.yida.docserver.plist
+  # Idempotent (re-)bootstrap.
+  domain="gui/$(id -u)"
+  launchctl bootout "$domain/com.yida.docserver" 2>/dev/null || true
+  launchctl bootstrap "$domain" \
+    ~/Library/LaunchAgents/com.yida.docserver.plist
+elif [[ "$OS" == linux ]]; then
+  mkdir -p ~/.config/systemd/user
+  ln -sf ~/dotfiles/config/systemd/docserver.service \
+    ~/.config/systemd/user/docserver.service
+  if command -v systemctl >/dev/null && systemctl --user status >/dev/null 2>&1; then
+    systemctl --user daemon-reload
+    systemctl --user enable --now docserver.service
+  else
+    echo "Warning: systemd --user not available; docserver not enabled" >&2
+  fi
+fi
 
 # -----------------------------------------------------------------------------
 # Vim-ime (SKK Japanese-input pad). Plugins live under

@@ -27,11 +27,18 @@ behaviours that look fine but break in surprising ways if you guess.
 .claude/             Claude Code config. settings.json is shared between
                      user-level (~/.claude/) and project-level (this
                      repo) — touching it affects both.
-bin/                 Personal scripts (sshs is the only one right now).
-config/              Plain-data config consumed by bin/ scripts. Today
-                     just sshs/hosts.json (host alias / Tailscale name /
-                     tab color / default -L port). Symlinked to
-                     ~/.config/sshs/hosts.json by install.sh.
+bin/                 Personal scripts. sshs (multi-host iTerm2 fan-out)
+                     and docserver (per-host static doc server, 127.0.0.1
+                     only, used together with sshs's per-host -L).
+config/              Plain-data config consumed by bin/ scripts and OS
+                     service managers. sshs/hosts.json (host registry —
+                     alias, Tailscale name, tab color, forward_port,
+                     optional docserver_root). launchd/ and systemd/
+                     hold the docserver service definitions; install.sh
+                     symlinks them and bootstraps via launchctl /
+                     systemctl --user. The docserver process binds to
+                     127.0.0.1 so the only way to reach it from another
+                     machine is the ssh -L tunnel sshs sets up.
 fish/, zsh/          Shell config. Both export EDITOR=nvim.
 iterm2/              iTerm2 preferences plist. iTerm2 reads/writes here
                      via PrefsCustomFolder.

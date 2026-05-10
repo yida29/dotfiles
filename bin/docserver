@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Static file server kept running per-host so the tab opened by `sshs`
+# (which already forwards the matching local port) lands on a working
+# http://localhost:<port> the moment it connects.
+#
+# Bind is hardcoded to 127.0.0.1 — anything that wants to reach this
+# server has to come through ssh -L. Port and directory come from the
+# host registry (config/sshs/hosts.json, same file sshs reads):
+#   - port      = hosts.<self>.forward_port
+#   - directory = hosts.<self>.docserver_root, default $HOME/work
+# The host alias is detected the same way sshs does (Tailscale name +
+# hostname -s), so the user never has to pass arguments.
+#
+# Lifecycle is owned by launchd (macOS) or systemd --user (Linux); see
+# config/launchd/ and config/systemd/. install.sh wires both up.
+
+set -euo pipefail
+
+if ! command -v jq >/dev/null; then
+  echo "Error: jq is required" >&2
+  exit 1
+fi
+
+if ! command -v python3 >/dev/null; then
+  echo "Error: python3 is required" >&2
+  exit 1
+fi
+
+find_hosts_json() {
+  if [ -n "${SSHS_HOSTS_JSON:-}" ] && [ -f "$SSHS_HOSTS_JSON" ]; then
+    echo "$SSHS_HOSTS_JSON"; return
+  fi
+  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/sshs/hosts.json"
+  if [ -f "$cfg" ]; then echo "$cfg"; return; fi
+  local script_dir; script_dir="$(cd "$(dirname "$0")" && pwd)"
+  local repo_cfg="$script_dir/../config/sshs/hosts.json"
+  if [ -f "$repo_cfg" ]; then echo "$repo_cfg"; return; fi
+  return 1
+}
+
+HOSTS_JSON="$(find_hosts_json)" || {
+  echo "Error: hosts.json not found" >&2
+  exit 1
+}
+
+# Detect self alias by matching local hostname (or Tailscale hostname)
+# against hosts.<alias>.tailscale_name.
+self_alias() {
+  local local_hostname
+  local_hostname="$(hostname -s 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+
+  local match
+  match="$(jq -r --arg h "$local_hostname" '
+    .hosts | to_entries
+    | map(select((.value.tailscale_name // "" | ascii_downcase) == $h))
+    | .[0].key // ""
+  ' "$HOSTS_JSON")"
+  if [ -n "$match" ]; then echo "$match"; return; fi
+
+  # Fallback: ask Tailscale itself.
+  local ts_cmd=""
+  if command -v tailscale &>/dev/null; then
+    ts_cmd="tailscale"
+  elif [ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]; then
+    ts_cmd="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+  fi
+  if [ -n "$ts_cmd" ]; then
+    local ts_hostname
+    ts_hostname="$("$ts_cmd" status --self --json 2>/dev/null \
+      | jq -r '.Self.HostName // ""' \
+      | tr '[:upper:]' '[:lower:]')"
+    if [ -n "$ts_hostname" ]; then
+      match="$(jq -r --arg h "$ts_hostname" '
+        .hosts | to_entries
+        | map(select((.value.tailscale_name // "" | ascii_downcase) == $h))
+        | .[0].key // ""
+      ' "$HOSTS_JSON")"
+      if [ -n "$match" ]; then echo "$match"; return; fi
+    fi
+  fi
+  return 1
+}
+
+ALIAS="$(self_alias)" || {
+  echo "Error: could not identify this host in hosts.json (hostname=$(hostname -s))" >&2
+  exit 1
+}
+
+PORT="$(jq -r --arg a "$ALIAS" '.hosts[$a].forward_port // ""' "$HOSTS_JSON")"
+if [ -z "$PORT" ] || [ "$PORT" = "null" ]; then
+  echo "Error: no forward_port defined for host \"$ALIAS\" in hosts.json" >&2
+  exit 1
+fi
+
+ROOT="$(jq -r --arg a "$ALIAS" '.hosts[$a].docserver_root // ""' "$HOSTS_JSON")"
+if [ -z "$ROOT" ] || [ "$ROOT" = "null" ]; then
+  ROOT="$HOME/work"
+fi
+
+if [ ! -d "$ROOT" ]; then
+  echo "Error: docserver root \"$ROOT\" is not a directory" >&2
+  exit 1
+fi
+
+echo "docserver: alias=$ALIAS bind=127.0.0.1 port=$PORT root=$ROOT" >&2
+exec python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$ROOT"
