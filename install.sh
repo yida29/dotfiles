@@ -124,6 +124,14 @@ install_jq() {
   echo "Warning: don't know how to install jq on this OS"
 }
 
+install_ripgrep() {
+  command -v rg >/dev/null && return 0
+  echo "Installing ripgrep..."
+  if install_via_brew ripgrep; then return; fi
+  if install_via_apt ripgrep; then return; fi
+  echo "Warning: don't know how to install ripgrep on this OS"
+}
+
 # -----------------------------------------------------------------------------
 # Symlink config files
 # -----------------------------------------------------------------------------
@@ -256,6 +264,7 @@ install_fzf
 install_delta
 install_deno
 install_jq
+install_ripgrep
 
 # -----------------------------------------------------------------------------
 # SKK dictionary for skkeleton (cross-host, OS-independent)
