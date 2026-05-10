@@ -1,0 +1,25 @@
+{
+  "default_color": "149 165 166",
+  "hosts": {
+    "stb": {
+      "tailscale_name": "st000008003",
+      "color": "241 196 15",
+      "forward_port": 19291
+    },
+    "ep": {
+      "tailscale_name": "yutos-macbook-air",
+      "color": "46 204 113",
+      "forward_port": 19292
+    },
+    "home": {
+      "tailscale_name": "yutos-mac-mini",
+      "color": "52 152 219",
+      "forward_port": 19293
+    },
+    "home2": {
+      "tailscale_name": "rogally-1",
+      "color": "255 255 255",
+      "forward_port": 19294
+    }
+  }
+}

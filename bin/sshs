@@ -4,42 +4,56 @@
 #        sshs -L 8080:localhost:80 ep home
 #        sshs -J ep -L 8080:localhost:80 home
 #
-# Each host also gets a per-host default -L (see HOST_FWD_PORT below) for
-# ad-hoc web previews on the remote (cargo doc, python -m http.server,
+# Each host also gets a per-host default -L (see hosts.json forward_port)
+# for ad-hoc web previews on the remote (cargo doc, python -m http.server,
 # etc.). User-supplied -L is added on top, not in place of, the default.
+#
+# Host registry lives in $XDG_CONFIG_HOME/sshs/hosts.json (override with
+# SSHS_HOSTS_JSON). To add a new host, edit that file — sshs reads from it
+# at startup, the script itself stays untouched.
 
 set -euo pipefail
 
-# ── Host registry ──
-# Tailscale hostname -> SSH alias, tab color (R G B)
-# To add a new host, add an entry here and in SSH config on each machine.
-# Hosts included in the default connection set
-ALL_HOSTS="stb ep home home2"
-declare -A HOST_TS_NAME=(
-  [stb]=st000008003
-  [ep]=yutos-macbook-air
-  [home]=yutos-mac-mini
-  [home2]=rogally-1
-)
-declare -A HOST_COLOR=(
-  [stb]="241 196 15"     # yellow
-  [ep]="46 204 113"      # green
-  [home]="52 152 219"    # blue
-  [home2]="255 255 255"  # white
-)
-DEFAULT_COLOR="149 165 166"  # gray
+# ── Host registry: load from JSON ──
+if ! command -v jq >/dev/null; then
+  echo "Error: jq is required to parse hosts.json" >&2
+  exit 1
+fi
 
-# Always-on -L for casual one-off web previews from the remote (e.g.
-# `cargo doc` output, `python3 -m http.server`, vite preview). Each host
-# gets its own port so multiple sshs tabs can coexist without collisions.
-# Pick a different number on the remote side too — the value below is
-# both the local *and* the remote port.
-declare -A HOST_FWD_PORT=(
-  [stb]=19291
-  [ep]=19292
-  [home]=19293
-  [home2]=19294
-)
+find_hosts_json() {
+  if [ -n "${SSHS_HOSTS_JSON:-}" ] && [ -f "$SSHS_HOSTS_JSON" ]; then
+    echo "$SSHS_HOSTS_JSON"; return
+  fi
+  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/sshs/hosts.json"
+  if [ -f "$cfg" ]; then
+    echo "$cfg"; return
+  fi
+  # Fallback: when running directly from the dotfiles checkout.
+  local script_dir; script_dir="$(cd "$(dirname "$0")" && pwd)"
+  local repo_cfg="$script_dir/../config/sshs/hosts.json"
+  if [ -f "$repo_cfg" ]; then
+    echo "$repo_cfg"; return
+  fi
+  return 1
+}
+
+HOSTS_JSON="$(find_hosts_json)" || {
+  echo "Error: hosts.json not found (looked at \$SSHS_HOSTS_JSON, \$XDG_CONFIG_HOME/sshs/hosts.json, and the dotfiles fallback)" >&2
+  exit 1
+}
+
+ALL_HOSTS="$(jq -r '.hosts | keys_unsorted | join(" ")' "$HOSTS_JSON")"
+DEFAULT_COLOR="$(jq -r '.default_color // "149 165 166"' "$HOSTS_JSON")"
+
+declare -A HOST_TS_NAME=()
+declare -A HOST_COLOR=()
+declare -A HOST_FWD_PORT=()
+while IFS=$'\t' read -r alias ts_name color fwd_port; do
+  [ -z "$alias" ] && continue
+  HOST_TS_NAME["$alias"]="$ts_name"
+  HOST_COLOR["$alias"]="$color"
+  [ "$fwd_port" != "null" ] && HOST_FWD_PORT["$alias"]="$fwd_port"
+done < <(jq -r '.hosts | to_entries[] | [.key, (.value.tailscale_name // ""), (.value.color // ""), (.value.forward_port // "null" | tostring)] | @tsv' "$HOSTS_JSON")
 
 # ── Detect which host we are running on ──
 get_self_alias() {

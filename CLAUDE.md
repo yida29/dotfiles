@@ -28,6 +28,10 @@ behaviours that look fine but break in surprising ways if you guess.
                      user-level (~/.claude/) and project-level (this
                      repo) — touching it affects both.
 bin/                 Personal scripts (sshs is the only one right now).
+config/              Plain-data config consumed by bin/ scripts. Today
+                     just sshs/hosts.json (host alias / Tailscale name /
+                     tab color / default -L port). Symlinked to
+                     ~/.config/sshs/hosts.json by install.sh.
 fish/, zsh/          Shell config. Both export EDITOR=nvim.
 iterm2/              iTerm2 preferences plist. iTerm2 reads/writes here
                      via PrefsCustomFolder.

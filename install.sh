@@ -163,6 +163,12 @@ ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_
 
 ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
 
+# sshs reads its host registry (aliases, tab colors, default forward
+# ports, Tailscale names) from ~/.config/sshs/hosts.json. Same file on
+# every host — sshs itself is a thin reader.
+mkdir -p ~/.config/sshs
+ln -sf ~/dotfiles/config/sshs/hosts.json ~/.config/sshs/hosts.json
+
 # -----------------------------------------------------------------------------
 # Vim-ime (SKK Japanese-input pad). Plugins live under
 # ~/.vim/pack/plugins/start/ and are loaded by Vim's native :h packages
