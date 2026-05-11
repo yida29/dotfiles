@@ -193,17 +193,29 @@ if [ -n "$jump_host" ]; then
 fi
 
 # ── Open tabs ──
+# After ssh connects we auto-invoke the user's `repo` zsh function so the
+# tab lands in (or creates) the tmux session for whatever repo the user
+# picks via fzf. If they Esc the fzf picker, `repo` just returns and we
+# fall through to a plain interactive zsh — no harm done.
+#
+# Requirements for this to work:
+#   - ssh -t   so fzf has a TTY
+#   - zsh -ic  so the `repo` function defined in ~/.zshrc is available
+#   - exec zsh -l afterwards so the ssh session stays alive after `repo`
+#     returns (with or without an attached tmux)
+REMOTE_BOOT='zsh -ic repo; exec zsh -l'
+
 for host in "${hosts[@]}"; do
   read -r r g b <<< "$(get_color "$host")"
   fwd_port="$(host_field "$host" .forward_port)"
-  ssh_cmd="ssh"
+  ssh_cmd="ssh -t"
   if [ -n "$fwd_port" ]; then
     ssh_cmd="${ssh_cmd} -L ${fwd_port}:localhost:${fwd_port}"
   fi
   if [ -n "$common_opts_str" ]; then
     ssh_cmd="${ssh_cmd} ${common_opts_str}"
   fi
-  ssh_cmd="${ssh_cmd} ${host}"
+  ssh_cmd="${ssh_cmd} ${host} '${REMOTE_BOOT}'"
   osascript -e "
 tell application \"iTerm2\"
   activate
