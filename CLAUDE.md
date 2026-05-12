@@ -90,6 +90,10 @@ the IME-pad focus hand-off) is a no-op there.
   on every tmux layer (already in `tmux/tmux.conf`, but `home2`'s tmux
   3.2a skips passthrough — OSC 52 from inside a nested tmux there will
   not reach the outer terminal).
+  `~/.config/nvim/lua/config/lazy.lua` is the other LazyVim-template
+  file we touch out-of-band: install.sh sed's it to keep `netrwPlugin`
+  in `disabled_plugins`, so netrw doesn't open a second buffer next to
+  neo-tree when you `nvim ./somedir`. The sed is idempotent.
 
 - **Renaming or deleting a tracked file** — check whether `install.sh`
   references it. Deleting a symlink target without removing the

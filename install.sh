@@ -283,6 +283,19 @@ for cfg in ~/dotfiles/.config/nvim/lua/config/*.lua; do
   fi
 done
 
+# LazyVim's template lua/config/lazy.lua ships with `netrwPlugin`
+# commented out of the disabled_plugins list, so netrw stays loaded and
+# fights neo-tree (both pop up when you `nvim ./somedir`). Flip the
+# comment off in place. Idempotent: we only sed the still-commented form.
+NVIM_LAZY=~/.config/nvim/lua/config/lazy.lua
+if [ -f "$NVIM_LAZY" ] && grep -q '^[[:space:]]*-- "netrwPlugin",' "$NVIM_LAZY"; then
+  if [[ "$OS" == macos ]]; then
+    sed -i '' 's|-- "netrwPlugin",|"netrwPlugin",|' "$NVIM_LAZY"
+  else
+    sed -i 's|-- "netrwPlugin",|"netrwPlugin",|' "$NVIM_LAZY"
+  fi
+fi
+
 # -----------------------------------------------------------------------------
 # fish + tmux plugin managers
 # -----------------------------------------------------------------------------
