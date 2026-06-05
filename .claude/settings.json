@@ -5,7 +5,6 @@
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus[1m]",
   "hooks": {
     "Notification": [
       {
@@ -24,8 +23,6 @@
     "command": "~/.claude/statusline.sh"
   },
   "enabledPlugins": {
-    "ralph-loop@claude-plugins-official": true,
-    "supabase@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
