@@ -9,13 +9,13 @@ set -gx VOLTA_HOME "$HOME/.volta"
 # =============================================================================
 
 set -gx PATH \
-  $HOME/.local/bin \
-  $HOME/.local/share/aquaproj-aqua/bin \
-  $HOME/.claude/local \
-  "$VOLTA_HOME/bin" \
-  /opt/homebrew/bin \
-  $HOME/.lmstudio/bin \
-  $PATH
+    $HOME/.local/bin \
+    $HOME/.local/share/aquaproj-aqua/bin \
+    $HOME/.claude/local \
+    "$VOLTA_HOME/bin" \
+    /opt/homebrew/bin \
+    $HOME/.lmstudio/bin \
+    $PATH
 
 fish_add_path /opt/homebrew/opt/postgresql@16/bin
 
@@ -24,16 +24,16 @@ fish_add_path /opt/homebrew/opt/postgresql@16/bin
 # =============================================================================
 
 if test -f ~/.backlog_domain
-  set -gx BACKLOG_DOMAIN (cat ~/.backlog_domain)
+    set -gx BACKLOG_DOMAIN (cat ~/.backlog_domain)
 end
 if test -f ~/.backlog_key
-  set -gx BACKLOG_API_KEY (cat ~/.backlog_key)
+    set -gx BACKLOG_API_KEY (cat ~/.backlog_key)
 end
 if test -f ~/.gemini_key
-  set -gx GEMINI_API_KEY (cat ~/.gemini_key)
+    set -gx GEMINI_API_KEY (cat ~/.gemini_key)
 end
 if test -f ~/.jira_token
-  set -gx JIRA_API_TOKEN (cat ~/.jira_token)
+    set -gx JIRA_API_TOKEN (cat ~/.jira_token)
 end
 
 # =============================================================================
@@ -47,37 +47,33 @@ starship init fish | source
 # =============================================================================
 
 function claude
-  if test -x $HOME/.local/bin/claude
-    $HOME/.local/bin/claude $argv
-  else if test -x $HOME/.local/share/aquaproj-aqua/bin/claude
-    $HOME/.local/share/aquaproj-aqua/bin/claude $argv
-  else if test -x /Users/yida/.volta/tools/image/node/24.9.0/bin/claude
-    /Users/yida/.volta/tools/image/node/24.9.0/bin/claude $argv
-  else if test -x /opt/homebrew/bin/claude
-    /opt/homebrew/bin/claude $argv
-  else
-    command claude $argv
-  end
+    if test -x $HOME/.local/bin/claude
+        $HOME/.local/bin/claude $argv
+    else if test -x $HOME/.local/share/aquaproj-aqua/bin/claude
+        $HOME/.local/share/aquaproj-aqua/bin/claude $argv
+    else if test -x /Users/yida/.volta/tools/image/node/24.9.0/bin/claude
+        /Users/yida/.volta/tools/image/node/24.9.0/bin/claude $argv
+    else if test -x /opt/homebrew/bin/claude
+        /opt/homebrew/bin/claude $argv
+    else
+        command claude $argv
+    end
 end
 
 function cc
-  HOMEBREW_NO_AUTO_UPDATE=1 CLAUDE_CODE_NO_FLICKER=1 claude --resume $argv
-end
-
-function ccr
-  CLAUDE_CODE_NO_FLICKER=1 claude --resume $argv
+    CLAUDE_CODE_NO_FLICKER=1 HOMEBREW_NO_AUTO_UPDATE=1 CLAUDE_CODE_NO_FLICKER=1 claude --resume $argv
 end
 
 function cx
-  codex --dangerously-bypass-approvals-and-sandbox $argv
+    codex --dangerously-bypass-approvals-and-sandbox $argv
 end
 
 function cop
-  COPILOT_MODEL=gpt-5.4 copilot --allow-all-tools --banner $argv
+    COPILOT_MODEL=gpt-5.4 copilot --allow-all-tools --banner $argv
 end
 
 function ge
-  gemini --model gemini-3-pro --yolo $argv
+    gemini --model gemini-3-pro --yolo $argv
 end
 
 # =============================================================================
@@ -94,28 +90,28 @@ alias nvi='neovide'
 # =============================================================================
 
 function repo
-  set selected (ghq list --full-path | fzf --preview "ls -la {}")
-  if test -z "$selected"
-    return
-  end
-
-  set session_name (basename "$selected" | tr "." "_")
-  set current_session (tmux display-message -p "#S" 2>/dev/null)
-
-  if set -q TMUX
-    if test "$session_name" = "$current_session"
-      cd "$selected"
-    else if tmux has-session -t="$session_name" 2>/dev/null
-      tmux switch-client -t "$session_name"
-    else
-      tmux new-session -d -s "$session_name" -c "$selected"
-      tmux switch-client -t "$session_name"
+    set selected (ghq list --full-path | fzf --preview "ls -la {}")
+    if test -z "$selected"
+        return
     end
-  else
-    if tmux has-session -t="$session_name" 2>/dev/null
-      tmux attach -t "$session_name"
+
+    set session_name (basename "$selected" | tr "." "_")
+    set current_session (tmux display-message -p "#S" 2>/dev/null)
+
+    if set -q TMUX
+        if test "$session_name" = "$current_session"
+            cd "$selected"
+        else if tmux has-session -t="$session_name" 2>/dev/null
+            tmux switch-client -t "$session_name"
+        else
+            tmux new-session -d -s "$session_name" -c "$selected"
+            tmux switch-client -t "$session_name"
+        end
     else
-      tmux new-session -s "$session_name" -c "$selected"
+        if tmux has-session -t="$session_name" 2>/dev/null
+            tmux attach -t "$session_name"
+        else
+            tmux new-session -s "$session_name" -c "$selected"
+        end
     end
-  end
 end

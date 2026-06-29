@@ -16,6 +16,26 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/yuto.ida/dotfiles/.claude/hooks/detect-leaked-toolcall.py"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/yuto.ida/dotfiles/.claude/hooks/detect-leaked-toolcall.py"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
@@ -23,6 +43,7 @@
     "command": "~/.claude/statusline.sh"
   },
   "enabledPlugins": {
+    "ralph-loop@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
@@ -34,10 +55,10 @@
       "autoUpdate": true
     }
   },
-  "alwaysThinkingEnabled": false,
   "autoMemoryEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark-daltonized",
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "tui": "fullscreen"
 }

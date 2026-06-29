@@ -9,3 +9,6 @@
 # its own learning rather than sharing it through dotfiles.
 .skk/userJisyo
 
+
+# runtime artifact, not source
+.claude/hooks/leaked-toolcall-triggers.log
