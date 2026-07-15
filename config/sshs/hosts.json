@@ -23,7 +23,7 @@
       "forward_port": 19294
     },
     "ubuntu": {
-      "tailscale_name": "ubuntu",
+      "tailscale_name": "yida-ms-7e80",
       "color": "155 89 182",
       "forward_port": 19295
     }
