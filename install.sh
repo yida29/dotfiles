@@ -345,12 +345,13 @@ mkdir -p ~/.claude/output-styles
 ln -sf "$DOTFILES_DIR/.claude/settings.json" ~/.claude/settings.json
 # settings.local.json contains machine-specific paths, so don't symlink it
 # Instead, copy as template if it doesn't exist
-if [ ! -f ~/.claude/settings.local.json ]; then
+if [ ! -f ~/.claude/settings.local.json ] && [ -f "$DOTFILES_DIR/.claude/settings.local.json" ]; then
   cp "$DOTFILES_DIR/.claude/settings.local.json" ~/.claude/settings.local.json
 fi
 
 # Continuous-Claude: set CLAUDE_OPC_DIR if its data dir exists.
 if [ -d "$HOME/.local/share/continuous-claude/opc" ]; then
+  [ -f ~/.claude/settings.local.json ] || printf '{}\n' > ~/.claude/settings.local.json
   tmp_file=$(mktemp)
   jq --arg opc_dir "$HOME/.local/share/continuous-claude/opc" \
     '.env = (.env // {}) | .env.CLAUDE_OPC_DIR = $opc_dir' \
