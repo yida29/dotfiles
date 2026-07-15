@@ -52,7 +52,10 @@ self_alias() {
   local match
   match="$(jq -r --arg h "$local_hostname" '
     .hosts | to_entries
-    | map(select((.value.tailscale_name // "" | ascii_downcase) == $h))
+    | map(select(
+        (.value.tailscale_name // "" | ascii_downcase) == $h or
+        (.value.local_hostname // "" | ascii_downcase) == $h
+      ))
     | .[0].key // ""
   ' "$HOSTS_JSON")"
   if [ -n "$match" ]; then echo "$match"; return; fi
