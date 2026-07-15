@@ -3,10 +3,10 @@
 Personal dotfiles for `yida29@github`. Used across four hosts: a stanby
 work Mac (`local`, the one you're usually editing on), a home Mac mini
 (`home`), a Linux WSL2 box (`home2`), and an eco-pork Mac (`ep`). All
-hosts hold their own clone of this repo at `~/dotfiles/` and live-share
+hosts hold their own clone of this repo at `~/work/dotfiles/` and live-share
 state through plain `git pull`.
 
-This file is read by Claude Code when working in `~/dotfiles/`. Skim it
+This file is read by Claude Code when working in `~/work/dotfiles/`. Skim it
 before editing anything; quite a few things here have hard-won subtle
 behaviours that look fine but break in surprising ways if you guess.
 
@@ -71,7 +71,7 @@ the IME-pad focus hand-off) is a no-op there.
   iTerm2 UI. Never write to the plist via `defaults` while iTerm2 is up.
 
 - **Editing `.hammerspoon/init.lua`** — there is now a pathwatcher on
-  `~/dotfiles/.hammerspoon/` that auto-reloads on `.lua` changes, BUT
+  `~/work/dotfiles/.hammerspoon/` that auto-reloads on `.lua` changes, BUT
   it has to have been picked up by an earlier reload first. After the
   *very first* deploy of a new init.lua, the user still has to manually
   Reload Config from the Hammerspoon menu bar. Subsequent changes will
@@ -111,7 +111,7 @@ The pattern across all hosts:
 
 1. Make changes locally.
 2. `git commit && git push`.
-3. On each remote host: `cd ~/dotfiles && git pull --rebase`.
+3. On each remote host: `cd ~/work/dotfiles && git pull --rebase`.
 
 Things that need extra steps after `git pull`:
 
@@ -135,10 +135,10 @@ Things that need extra steps after `git pull`:
 
 ```sh
 # Hammerspoon pure helpers (busted, lua + luarocks via brew)
-cd ~/dotfiles/.hammerspoon && busted test/
+cd ~/work/dotfiles/.hammerspoon && busted test/
 
 # vim-ime pure helpers (vim-themis, the runner is in pack/plugins/start/)
-~/.vim/pack/plugins/start/vim-themis/bin/themis ~/dotfiles/.vim/test/
+~/.vim/pack/plugins/start/vim-themis/bin/themis ~/work/dotfiles/.vim/test/
 ```
 
 Both test suites cover only the *pure* helpers (mode-label / SKK-label /

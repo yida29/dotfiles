@@ -22,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/yuto.ida/dotfiles/.claude/hooks/detect-leaked-toolcall.py"
+            "command": "$HOME/work/dotfiles/.claude/hooks/detect-leaked-toolcall.py"
           }
         ]
       }
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/yuto.ida/dotfiles/.claude/hooks/detect-leaked-toolcall.py"
+            "command": "$HOME/work/dotfiles/.claude/hooks/detect-leaked-toolcall.py"
           }
         ]
       }

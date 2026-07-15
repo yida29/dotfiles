@@ -1,16 +1,21 @@
 export GOENV_ROOT=$HOME/.goenv
 export PATH=$GOENV_ROOT/bin:$PATH
-eval "$(goenv init -)"
+command -v goenv >/dev/null && eval "$(goenv init -)"
 export PATH="$HOME/.nodenv/bin:$PATH"
-eval "$(nodenv init -)"
+command -v nodenv >/dev/null && eval "$(nodenv init -)"
 export PATH="$HOME/.pyenv/bin:$PATH"
-eval "$(pyenv init -)"
+command -v pyenv >/dev/null && eval "$(pyenv init -)"
 
-. "$HOME/.local/bin/env"
+[[ -f "$HOME/.local/bin/env" ]] && source "$HOME/.local/bin/env"
 
 # Editor
-export EDITOR='nvim'
-export VISUAL='nvim'
+if command -v nvim >/dev/null; then
+  export EDITOR='nvim'
+  export VISUAL='nvim'
+else
+  export EDITOR='vim'
+  export VISUAL='vim'
+fi
 
 # opencode
 export PATH=$HOME/.opencode/bin:$PATH

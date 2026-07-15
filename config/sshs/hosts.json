@@ -20,6 +20,11 @@
       "tailscale_name": "rogally-1",
       "color": "255 255 255",
       "forward_port": 19294
+    },
+    "ubuntu": {
+      "tailscale_name": "ubuntu",
+      "color": "155 89 182",
+      "forward_port": 19295
     }
   }
 }

@@ -14,7 +14,7 @@ Personal configuration files for Vim, Neovim, Fish shell, tmux, and other develo
 ## install
 
 ```
-git clone https://github.com/ida29/dotfiles.git
-cd dotfiles
+git clone https://github.com/yida29/dotfiles.git ~/work/dotfiles
+cd ~/work/dotfiles
 ./install.sh
 ```

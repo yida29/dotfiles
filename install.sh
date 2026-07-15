@@ -35,6 +35,7 @@ esac
 # already have `apt upgrade`, and we don't want to surprise either.
 # -----------------------------------------------------------------------------
 mkdir -p ~/.local/bin
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/work/dotfiles}"
 
 # Make sure ~/.local/bin and ~/.cargo/bin are visible to *this script*'s
 # subshells, so command -v finds binaries we just installed.
@@ -136,39 +137,39 @@ install_ripgrep() {
 # Symlink config files
 # -----------------------------------------------------------------------------
 if [[ "$OS" != windows ]]; then
-  ln -sf ~/dotfiles/.vimrc ~/.vimrc
-  ln -sf ~/dotfiles/.ctags ~/.ctags
-  ln -sf ~/dotfiles/.ctags.d ~/.ctags.d
+  ln -sf "$DOTFILES_DIR/.vimrc" ~/.vimrc
+  ln -sf "$DOTFILES_DIR/.ctags" ~/.ctags
+  ln -sf "$DOTFILES_DIR/.ctags.d" ~/.ctags.d
 fi
-ln -sf ~/dotfiles/zsh/.zshrc ~/.zshrc
+ln -sf "$DOTFILES_DIR/zsh/.zshrc" ~/.zshrc
 
 mkdir -p ~/.config/tmux
-ln -sf ~/dotfiles/tmux/tmux.conf ~/.config/tmux/tmux.conf
+ln -sf "$DOTFILES_DIR/tmux/tmux.conf" ~/.config/tmux/tmux.conf
 # tmux-sensible expects ~/.tmux.conf
-ln -sf ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
+ln -sf "$DOTFILES_DIR/tmux/tmux.conf" ~/.tmux.conf
 
 # lazygit config — only macOS path because the Linux config dir is
 # ~/.config/lazygit/ and we don't currently need that.
 if [[ "$OS" == macos ]]; then
   mkdir -p "$HOME/Library/Application Support/lazygit"
-  ln -sf ~/dotfiles/lazygit/config.yml "$HOME/Library/Application Support/lazygit/config.yml"
+  ln -sf "$DOTFILES_DIR/lazygit/config.yml" "$HOME/Library/Application Support/lazygit/config.yml"
 else
   mkdir -p "$HOME/.config/lazygit"
-  ln -sf ~/dotfiles/lazygit/config.yml "$HOME/.config/lazygit/config.yml"
+  ln -sf "$DOTFILES_DIR/lazygit/config.yml" "$HOME/.config/lazygit/config.yml"
 fi
 
 mkdir -p ~/.config/fish/functions
-ln -sf ~/dotfiles/fish/config.fish ~/.config/fish/config.fish
-ln -sf ~/dotfiles/fish/functions/fish_prompt.fish ~/.config/fish/functions/fish_prompt.fish
+ln -sf "$DOTFILES_DIR/fish/config.fish" ~/.config/fish/config.fish
+ln -sf "$DOTFILES_DIR/fish/functions/fish_prompt.fish" ~/.config/fish/functions/fish_prompt.fish
 
-ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
-ln -sf ~/dotfiles/bin/docserver ~/.local/bin/docserver
+ln -sf "$DOTFILES_DIR/bin/sshs" ~/.local/bin/sshs
+ln -sf "$DOTFILES_DIR/bin/docserver" ~/.local/bin/docserver
 
 # sshs reads its host registry (aliases, tab colors, default forward
 # ports, Tailscale names) from ~/.config/sshs/hosts.json. Same file on
 # every host — sshs itself is a thin reader.
 mkdir -p ~/.config/sshs
-ln -sf ~/dotfiles/config/sshs/hosts.json ~/.config/sshs/hosts.json
+ln -sf "$DOTFILES_DIR/config/sshs/hosts.json" ~/.config/sshs/hosts.json
 
 # Per-host static doc server (companion to sshs). Lifecycle managed by
 # launchd on macOS, systemd --user on Linux. The service ExecStart's
@@ -181,7 +182,7 @@ mkdir -p "$HOME/work"
 
 if [[ "$OS" == macos ]]; then
   mkdir -p ~/Library/LaunchAgents
-  ln -sf ~/dotfiles/config/launchd/com.yida.docserver.plist \
+  ln -sf "$DOTFILES_DIR/config/launchd/com.yida.docserver.plist" \
     ~/Library/LaunchAgents/com.yida.docserver.plist
   # Idempotent (re-)bootstrap.
   domain="gui/$(id -u)"
@@ -190,7 +191,7 @@ if [[ "$OS" == macos ]]; then
     ~/Library/LaunchAgents/com.yida.docserver.plist
 elif [[ "$OS" == linux ]]; then
   mkdir -p ~/.config/systemd/user
-  ln -sf ~/dotfiles/config/systemd/docserver.service \
+  ln -sf "$DOTFILES_DIR/config/systemd/docserver.service" \
     ~/.config/systemd/user/docserver.service
   if command -v systemctl >/dev/null && systemctl --user status >/dev/null 2>&1; then
     systemctl --user daemon-reload
@@ -231,8 +232,8 @@ fi
 # autoload/test files for vim-ime are tracked in dotfiles. Symlink them
 # into ~/.vim/ so Vim's :h packages mechanism finds them.
 mkdir -p "$HOME/.vim/autoload" "$HOME/.vim/test"
-ln -sf "$HOME/dotfiles/.vim/autoload/vim_ime.vim" "$HOME/.vim/autoload/vim_ime.vim"
-ln -sf "$HOME/dotfiles/.vim/test/vim_ime.vimspec" "$HOME/.vim/test/vim_ime.vimspec"
+ln -sf "$DOTFILES_DIR/.vim/autoload/vim_ime.vim" "$HOME/.vim/autoload/vim_ime.vim"
+ln -sf "$DOTFILES_DIR/.vim/test/vim_ime.vimspec" "$HOME/.vim/test/vim_ime.vimspec"
 
 # -----------------------------------------------------------------------------
 # macOS-only desktop integration
@@ -243,13 +244,13 @@ if [[ "$OS" == macos ]]; then
     echo "Installing Hammerspoon..."
     brew install --cask hammerspoon
   fi
-  ln -sf ~/dotfiles/.hammerspoon ~/.hammerspoon
+  ln -sf "$DOTFILES_DIR/.hammerspoon" ~/.hammerspoon
 
   # iTerm2: PrefsCustomFolder + per-profile defaults that don't sync via
   # the shared plist. Without this, the "Japanese Input" profile (which
   # :qa!s on commit) triggers iTerm2's "session ended very soon" dialog
   # every time.
-  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/iterm2"
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$DOTFILES_DIR/iterm2"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
   defaults write com.googlecode.iterm2 \
     "NeverWarnAboutShortLivedSessions_${ITERM2_JAPANESE_PROFILE_GUID}" -bool true
@@ -269,7 +270,7 @@ for link in ~/.config/nvim/lua/plugins/*.lua ~/.config/nvim/lua/config/*.lua; do
   fi
 done
 # Create symlinks for all custom plugins
-for plugin in ~/dotfiles/.config/nvim/lua/plugins/*.lua; do
+for plugin in "$DOTFILES_DIR"/.config/nvim/lua/plugins/*.lua; do
   if [ -f "$plugin" ]; then
     ln -sf "$plugin" ~/.config/nvim/lua/plugins/"$(basename "$plugin")"
   fi
@@ -277,7 +278,7 @@ done
 # lua/config/ holds dotfiles-managed config snippets that need to load before
 # lazy.nvim (e.g. neovide GUI font). lua/config/options.lua itself stays in
 # the LazyVim template and is responsible for `require`ing these.
-for cfg in ~/dotfiles/.config/nvim/lua/config/*.lua; do
+for cfg in "$DOTFILES_DIR"/.config/nvim/lua/config/*.lua; do
   if [ -f "$cfg" ]; then
     ln -sf "$cfg" ~/.config/nvim/lua/config/"$(basename "$cfg")"
   fi
@@ -334,21 +335,18 @@ fi
 git config --global ghq.root ~/work
 git config --global core.editor 'vim -c "set fenc=utf-8"'
 
-# Surface this dotfiles checkout to ghq. The repo lives at ~/dotfiles
-# for historical / convention reasons, but ghq only walks ghq.root
-# (~/work/), so without this link `ghq list` doesn't see it.
+# The canonical checkout lives directly under ghq.root.
 mkdir -p ~/work
-[ ! -e ~/work/dotfiles ] && ln -s ~/dotfiles ~/work/dotfiles
 
 # -----------------------------------------------------------------------------
 # Claude Code
 # -----------------------------------------------------------------------------
 mkdir -p ~/.claude/output-styles
-ln -sf ~/dotfiles/.claude/settings.json ~/.claude/settings.json
+ln -sf "$DOTFILES_DIR/.claude/settings.json" ~/.claude/settings.json
 # settings.local.json contains machine-specific paths, so don't symlink it
 # Instead, copy as template if it doesn't exist
 if [ ! -f ~/.claude/settings.local.json ]; then
-  cp ~/dotfiles/.claude/settings.local.json ~/.claude/settings.local.json
+  cp "$DOTFILES_DIR/.claude/settings.local.json" ~/.claude/settings.local.json
 fi
 
 # Continuous-Claude: set CLAUDE_OPC_DIR if its data dir exists.
@@ -359,9 +357,9 @@ if [ -d "$HOME/.local/share/continuous-claude/opc" ]; then
     ~/.claude/settings.local.json > "$tmp_file" && mv "$tmp_file" ~/.claude/settings.local.json
 fi
 
-ln -sf ~/dotfiles/.claude/statusline.sh ~/.claude/statusline.sh
-chmod +x ~/dotfiles/.claude/statusline.sh
-for style in ~/dotfiles/.claude/output-styles/*.md; do
+ln -sf "$DOTFILES_DIR/.claude/statusline.sh" ~/.claude/statusline.sh
+chmod +x "$DOTFILES_DIR/.claude/statusline.sh"
+for style in "$DOTFILES_DIR"/.claude/output-styles/*.md; do
   if [ -f "$style" ]; then
     ln -sf "$style" ~/.claude/output-styles/
   fi
