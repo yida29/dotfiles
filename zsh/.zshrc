@@ -23,9 +23,10 @@ export PATH=$HOME/.opencode/bin:$PATH
 # Added by Antigravity
 export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
 
-# aqua (グローバルCLIツール管理) — node/codex等をバージョン固定で一元管理
+# aqua (グローバルCLIツール管理) — codex等をバージョン固定で一元管理。
+# 既存のnodenv/volta等を尊重するため低優先度(末尾)に置く=他に無いものだけ補う。
 export AQUA_GLOBAL_CONFIG="$HOME/.config/aquaproj-aqua/aqua.yaml"
-export PATH="$HOME/.local/share/aquaproj-aqua/bin:$PATH"
+export PATH="$PATH:$HOME/.local/share/aquaproj-aqua/bin"
 
 # ghq + fzf + tmux
 function repo() {

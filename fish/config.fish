@@ -13,12 +13,12 @@ set -gx AQUA_GLOBAL_CONFIG "$HOME/.config/aquaproj-aqua/aqua.yaml"
 
 set -gx PATH \
     $HOME/.local/bin \
-    $HOME/.local/share/aquaproj-aqua/bin \
     $HOME/.claude/local \
     "$VOLTA_HOME/bin" \
     /opt/homebrew/bin \
     $HOME/.lmstudio/bin \
-    $PATH
+    $PATH \
+    $HOME/.local/share/aquaproj-aqua/bin
 
 fish_add_path /opt/homebrew/opt/postgresql@16/bin
 
