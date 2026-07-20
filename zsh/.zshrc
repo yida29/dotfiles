@@ -23,6 +23,10 @@ export PATH=$HOME/.opencode/bin:$PATH
 # Added by Antigravity
 export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
 
+# aqua (グローバルCLIツール管理) — node/codex等をバージョン固定で一元管理
+export AQUA_GLOBAL_CONFIG="$HOME/.config/aquaproj-aqua/aqua.yaml"
+export PATH="$HOME/.local/share/aquaproj-aqua/bin:$PATH"
+
 # ghq + fzf + tmux
 function repo() {
   local selected=$(ghq list --full-path | fzf --preview 'ls -la {}')
@@ -59,3 +63,9 @@ export PATH="$PATH:/Users/yida/.lmstudio/bin"
 # End of LM Studio CLI section
 
 export PATH="$HOME/.local/bin:$PATH"
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+fpath=(~/.grok/completions/zsh $fpath)
+autoload -Uz compinit && compinit -C
+# <<< grok installer <<<

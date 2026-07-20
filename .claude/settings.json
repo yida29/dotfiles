@@ -5,6 +5,7 @@
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "Notification": [
       {
@@ -55,10 +56,10 @@
       "autoUpdate": true
     }
   },
+  "tui": "fullscreen",
   "autoMemoryEnabled": false,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark-daltonized",
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
-  "tui": "fullscreen"
+  "voiceEnabled": true
 }

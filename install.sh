@@ -171,6 +171,17 @@ ln -sf "$DOTFILES_DIR/bin/docserver" ~/.local/bin/docserver
 mkdir -p ~/.config/sshs
 ln -sf "$DOTFILES_DIR/config/sshs/hosts.json" ~/.config/sshs/hosts.json
 
+# aqua — global CLI tool manager (node, codex, ...). One shared aqua.yaml
+# across the fleet; aqua resolves the right per-OS binary. Shell rc files
+# put ~/.local/share/aquaproj-aqua/bin on PATH and set AQUA_GLOBAL_CONFIG.
+if ! command -v aqua >/dev/null && [[ ! -x "$HOME/.local/share/aquaproj-aqua/bin/aqua" ]]; then
+  curl -sSfL https://raw.githubusercontent.com/aquaproj/aqua-installer/v4.0.2/aqua-installer | bash
+fi
+mkdir -p ~/.config/aquaproj-aqua
+ln -sf "$DOTFILES_DIR/config/aquaproj-aqua/aqua.yaml" ~/.config/aquaproj-aqua/aqua.yaml
+AQUA_GLOBAL_CONFIG="$HOME/.config/aquaproj-aqua/aqua.yaml" \
+  "$HOME/.local/share/aquaproj-aqua/bin/aqua" install -l 2>/dev/null || true
+
 # Per-host static doc server (companion to sshs). Lifecycle managed by
 # launchd on macOS, systemd --user on Linux. The service ExecStart's
 # ~/.local/bin/docserver, which reads its port/root from hosts.json
