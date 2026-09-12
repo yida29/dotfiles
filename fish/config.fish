@@ -111,7 +111,7 @@ function cx
 end
 
 function cop
-    COPILOT_MODEL=grok-4.6 copilot --allow-all-tools --banner $argv
+    copilot --model gpt-6-astra --allow-all-tools --banner $argv
 end
 
 function agy
