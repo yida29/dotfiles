@@ -148,12 +148,13 @@ local function reloadOnLua(files)
   end
 end
 
-_G.imeConfigWatcher = hs.pathwatcher.new(
-  os.getenv("HOME") .. "/.hammerspoon/", reloadOnLua)
+local configPath = hs.configdir
+_G.imeConfigWatcher = hs.pathwatcher.new(configPath, reloadOnLua)
 _G.imeConfigWatcher:start()
 
-local dotfilesPath = os.getenv("HOME") .. "/dotfiles/.hammerspoon/"
-if hs.fs.attributes(dotfilesPath) then
+local dotfilesPath = assert(hs.fs.pathToAbsolute(configPath),
+  "Unable to resolve Hammerspoon config directory")
+if dotfilesPath ~= configPath then
   _G.imeDotfilesWatcher = hs.pathwatcher.new(dotfilesPath, reloadOnLua)
   _G.imeDotfilesWatcher:start()
 end

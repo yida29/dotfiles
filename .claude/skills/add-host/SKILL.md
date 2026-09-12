@@ -5,143 +5,134 @@ description: Onboard a new machine into the dotfiles fleet. Use when the user me
 
 # add-host
 
-Get a fresh machine to the same dotfiles state as the existing fleet.
+Use the canonical `install.sh` for a fresh host; there is no separate
+AstroNvim clone or hand-maintained bootstrap recipe. Existing hosts use
+the targeted update procedure in `../deploy/SKILL.md`.
 
-## Prerequisites
+## Prerequisites and safety
 
-- The new machine has working SSH access from the user's primary box.
-- The user can run commands locally on the new machine (graphical or
-  console; for the bootstrap step we need to type a few things in).
-- A GitHub SSH key on the new machine (see step 2).
+- Working SSH access and a local console on the new machine.
+- Git, curl, Python 3, fish, tmux, and Neovim supported by current
+  LazyVim. For the SKK pad, Vim ≥ 9.1.1646 and Deno are required (the
+  installer installs Deno). Check actual versions; distribution packages
+  may be too old. The installer does not install all prerequisites.
+- macOS: Xcode Command Line Tools, Homebrew and iTerm2 installed first.
+  The hotkey profile expects Homebrew Vim at `/opt/homebrew/bin/vim`.
+  Linux: on Debian/Ubuntu, `apt`, sudo access, `tar`, `gzip`, and `unzip`;
+  systemd user services are needed for automatic docserver startup.
+- Review `install.sh` and preserve existing dotfiles before running:
+  it installs tools/plugins, starts services and changes global Git/CLI
+  settings. Backup-preserving config links do not make all its other
+  operations non-destructive.
+- On macOS, save sessions and obtain approval to quit iTerm2 before
+  installation writes preferences. Never edit/pull its plist while the
+  app runs. Use the deploy skill's exact-PID procedure if termination is
+  necessary; do not automatically shut down GUI applications.
 
-## Sequence
+## 1. Register the host
 
-### 1. Pick an alias and add it to ~/.ssh/config
+`config/sshs/hosts.json` is the source of truth. Choose a unique SSH alias
+(currently `stb`, `ep`, `home`, `home2`, `ubuntu`; never `local`) and add:
 
-The alias becomes the `ssh <name>` shortcut and the label everywhere
-in CLAUDE.md / skills. Existing aliases: `local`, `home`, `home2`, `ep`.
+- `tailscale_name`: the machine's Tailscale name.
+- `local_hostname`: the actual short hostname when it differs from the
+  Tailscale name; verify with `hostname` on the new machine.
+- `color`: an RGB triplet string; `forward_port`: a unique available port.
+- Optional `docserver_root`: a host-specific document root when `~/work`
+  is not appropriate.
 
-Append to `~/.ssh/config` on the user's primary box:
+Add or carefully merge the SSH entry on every relevant client, including
+the new host for other fleet members; preserve existing SSH settings:
 
-```
+```sshconfig
 Host <alias>
     HostName <ip-or-tailscale-name>
     User <username>
 ```
 
-### 2. Bootstrap the new machine
+Validate the JSON with `python3 -m json.tool config/sshs/hosts.json`.
+Review, commit and push only the intended registry change before cloning
+on the new host. The deploy workflow derives targets automatically; no
+hard-coded host loop needs updating. Keep CLAUDE.md's descriptive OS table
+accurate if needed.
 
-On the new machine itself:
+## 2. Clone and install
 
-```sh
-# Install minimal tooling first
-xcode-select --install        # macOS only, brings git
-# (Linux: apt-get install -y git)
+Use an existing GitHub SSH key where possible. If creating one, choose an
+unused filename and do not overwrite existing keys; register only its
+public key with GitHub. HTTPS cloning is also supported.
 
-# Set up an SSH key for GitHub
-ssh-keygen -t ed25519 -C "<machine-label>"
-cat ~/.ssh/id_ed25519.pub     # add this to github.com/settings/keys
-
-# Clone dotfiles
-git clone git@github.com:yida29/dotfiles.git ~/dotfiles
-```
-
-### 3. Run the (manual, lifted-out) install steps
-
-`install.sh` exists but contains legacy AstroNvim and other things you
-don't want on a clean machine. Pick out only the parts you need:
-
-**Always:**
-```sh
-# Symlink shell + ctags
-ln -sf ~/dotfiles/zsh/.zshrc ~/.zshrc
-ln -sf ~/dotfiles/.ctags ~/.ctags
-ln -sf ~/dotfiles/.ctags.d ~/.ctags.d
-ln -sf ~/dotfiles/tmux/tmux.conf ~/.tmux.conf
-mkdir -p ~/.config/fish && ln -sf ~/dotfiles/fish/config.fish ~/.config/fish/config.fish
-
-# Personal bin
-mkdir -p ~/.local/bin
-ln -sf ~/dotfiles/bin/sshs ~/.local/bin/sshs
-
-# Vim IME pad (only worth setting up on macOS where the iTerm2 hotkey
-# window exists; on Linux you can skip the vim plugins).
-ln -sf ~/dotfiles/.vimrc ~/.vimrc
-mkdir -p ~/.vim/autoload ~/.vim/test
-ln -sf ~/dotfiles/.vim/autoload/vim_ime.vim ~/.vim/autoload/vim_ime.vim
-ln -sf ~/dotfiles/.vim/test/vim_ime.vimspec ~/.vim/test/vim_ime.vimspec
-
-# Vim plugins
-VIM_PACK="$HOME/.vim/pack/plugins/start"
-mkdir -p "$VIM_PACK"
-git clone --depth 1 https://github.com/vim-denops/denops.vim "$VIM_PACK/denops.vim"
-git clone --depth 1 https://github.com/vim-skk/skkeleton "$VIM_PACK/skkeleton"
-git clone --depth 1 https://github.com/azumakuniyuki/vim-colorschemes "$VIM_PACK/azuma-vim-colorschemes"
-mkdir -p "$VIM_PACK/azuma-vim-colorschemes/colors"
-mv "$VIM_PACK/azuma-vim-colorschemes/"*.vim "$VIM_PACK/azuma-vim-colorschemes/colors/" 2>/dev/null
-git clone --depth 1 https://github.com/kyoh86/momiji "$VIM_PACK/momiji"
-git clone --depth 1 https://github.com/thinca/vim-themis "$VIM_PACK/vim-themis"
-
-# SKK dictionary
-mkdir -p ~/.skk
-curl -L https://skk-dev.github.io/dict/SKK-JISYO.L.gz | gunzip > ~/.skk/SKK-JISYO.L
-[ -f ~/dotfiles/.skk/userJisyo ] && ln -sf ~/dotfiles/.skk/userJisyo ~/.skkeleton
-
-# Claude Code
-mkdir -p ~/.claude
-ln -sf ~/dotfiles/.claude/settings.json ~/.claude/settings.json
-ln -sf ~/dotfiles/.claude/statusline.sh ~/.claude/statusline.sh
-mkdir -p ~/.claude/output-styles
-for s in ~/dotfiles/.claude/output-styles/*.md; do
-  ln -sf "$s" ~/.claude/output-styles/
-done
-```
-
-**macOS only:**
-```sh
-# Hammerspoon for IME pad focus hand-off
-brew install --cask hammerspoon
-ln -sf ~/dotfiles/.hammerspoon ~/.hammerspoon
-# After first launch, manually grant Accessibility permission in
-# System Settings > Privacy & Security.
-
-# Vim 9.2+ (system vim is too old; denops needs ≥ 9.1.1646)
-brew install vim deno
-
-# iTerm2 PrefsCustomFolder + per-profile defaults
-defaults write com.googlecode.iterm2 PrefsCustomFolder \
-  -string "$HOME/dotfiles/iterm2"
-defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
-defaults write com.googlecode.iterm2 \
-  "NeverWarnAboutShortLivedSessions_B21BB39C-36F0-4C5D-A289-1E33C172D5D3" \
-  -bool true
-```
-
-**Linux only (home2-style):**
-- Vim 9.2+ may need building from source; the system apt vim is 8.x.
-  See `home2`'s history if you hit this — it requires `unzip`,
-  `libclang-dev`, and a Rust toolchain to build `tree-sitter-cli`.
-- `home2` doesn't run Hammerspoon or iTerm2; skip those entirely.
-
-### 4. Update CLAUDE.md and skills
-
-Add the new alias to:
-- `~/dotfiles/CLAUDE.md` (the host table at the top)
-- `~/dotfiles/.claude/skills/deploy/SKILL.md` (its host loop)
-
-Commit the docs update so other hosts see the new fleet member on
-their next pull.
-
-### 5. Verify
+On the new machine, after prerequisites and the iTerm2 safety check:
 
 ```sh
-ssh <alias> 'cd ~/dotfiles && git log -1 --oneline'
+mkdir -p ~/work &&
+git clone git@github.com:yida29/dotfiles.git ~/work/dotfiles &&
+cd ~/work/dotfiles &&
+bash install.sh
 ```
 
-If the new machine resolves and the HEAD matches origin/master, you're
-done. Optionally run the test suites on it as a smoke test:
+If the checkout already exists, stop and inspect it rather than cloning
+over it, stashing or resetting. For another checkout location, run
+`DOTFILES_DIR="$PWD" bash install.sh` from its root and account for that
+path in future deployments.
+
+The installer:
+
+- Links tracked Neovim entry/bootstrap/options and plugin files, backing
+  up replaced local config and conflicting `init.vim`. Helpers
+  `backup_config(target)` / `link_config(source, target)` preserve
+  nonmatching files, directories and symlinks at
+  `<target>.backup.XXXXXX/original`; matching symlinks are no-ops.
+  No untracked LazyVim template or manual
+  clipboard/neovide require lines are needed; tracked `lazy.lua` disables
+  `netrwPlugin`.
+- Links `.vimrc` and the compatibility entry
+  `~/.config/vim-ime/vimrc` used by the existing iTerm2 command. IME Enter
+  commit, autosave and hira startup affect only `~/Documents/ime-scratch`,
+  not ordinary Vim buffers.
+- Preserves an existing real `~/.hammerspoon` directory in a backup before
+  linking it on macOS. Its watcher resolves `hs.configdir` using
+  `hs.fs.pathToAbsolute`.
+- Links `fish/functions/neovide.fish`; there are no installer links to
+  nonexistent `.ctags`, `.ctags.d` or `fish_prompt.fish` sources. Installs
+  `jq` before starting docserver.
+- Seeds per-host Claude settings from `.claude/settings.json.example`,
+  not a shared symlink. SKK learning remains per-host (`~/.skkeleton`);
+  `.skk/userJisyo` is ignored and must not be linked as shared learning.
+
+On macOS, launch Hammerspoon after installation, grant Accessibility
+permission and manually Reload Config once. Linux skips Hammerspoon,
+iTerm2 preferences and the GUI IME hand-off.
+
+## 3. Verify
+
+Run these on the new host; no hard-coded deployment target is needed:
 
 ```sh
-ssh <alias> 'cd ~/dotfiles/.hammerspoon && busted test/'   # macOS
-ssh <alias> '~/.vim/pack/plugins/start/vim-themis/bin/themis ~/dotfiles/.vim/test/'
+cd ~/work/dotfiles &&
+git status --short &&
+git log -1 --oneline
 ```
+
+- Confirm HEAD matches the reviewed pushed commit and inspect symlink
+  targets/backups. Preserve and reconcile any previous host customizations.
+- Start Neovim, allow lazy.nvim/LazyVim bootstrap to finish, and check
+  plugin loading. Restart existing editor sessions after config changes.
+- Test the IME pad separately from ordinary Vim file editing: only the
+  scratch file should get Enter commit/autosave/hira startup.
+- Confirm local identity uniquely matches the registry and SSH access
+  works from relevant clients. Unknown identity must block deployment.
+- Confirm docserver is running and responds at `127.0.0.1` on this host's
+  registry port; inspect launchd/systemd status if not.
+
+Existing test suites (install busted separately if needed):
+
+```sh
+# macOS Hammerspoon helpers
+cd ~/work/dotfiles/.hammerspoon && busted test/
+# Vim helpers and isolated real-vimrc scope regressions
+~/.vim/pack/plugins/start/vim-themis/bin/themis ~/work/dotfiles/.vim/test/
+```
+
+These do not validate window focus or GUI reloads; verify those manually
+without discarding active sessions.

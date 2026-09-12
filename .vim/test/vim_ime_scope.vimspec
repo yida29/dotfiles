@@ -1,0 +1,98 @@
+let s:suite = themis#suite('vim_ime_scope')
+let s:assert = themis#helper('assert')
+let s:repo = fnamemodify(resolve(globpath(&runtimepath,
+      \ 'autoload/vim_ime.vim', 0, 1)[0]), ':h:h:h')
+
+" Run the real vimrc in a child Vim with an isolated HOME and no plugins.
+function! s:run(commands) abort
+  let l:home = resolve(tempname())
+  call mkdir(l:home . '/.vim/autoload', 'p')
+  call writefile([
+        \ 'function! skkeleton#handle(action, opts) abort',
+        \ '  let g:hira_calls += 1',
+        \ 'endfunction',
+        \ ], l:home . '/.vim/autoload/skkeleton.vim')
+  let l:script = l:home . '/probe.vim'
+  call writefile([
+        \ 'set runtimepath^=' . fnameescape(s:repo . '/.vim'),
+        \ 'set runtimepath^=' . fnameescape(l:home . '/.vim'),
+        \ 'source ' . fnameescape(s:repo . '/.vimrc'),
+        \ 'let g:hira_calls = 0',
+        \ 'let v:errmsg = ""',
+        \ ] + a:commands + [
+        \ 'call assert_equal("", v:errmsg)',
+        \ 'if !empty(v:errors)',
+        \ '  for error in v:errors | echomsg error | endfor',
+        \ '  cquit',
+        \ 'endif',
+        \ 'qa!',
+        \ ], l:script)
+  try
+    let l:output = system('HOME=' . shellescape(l:home) . ' '
+          \ . shellescape(v:progpath) . ' -Nu NONE -n -i NONE -es -V1 -S '
+          \ . shellescape(l:script))
+    let l:status = v:shell_error
+    call s:assert.equals(l:status, 0, l:output)
+  finally
+    call delete(l:home, 'rf')
+  endtry
+endfunction
+
+function! s:suite.ordinary_files_keep_enter_and_explicit_save() abort
+  call s:run([
+        \ 'call writefile(["before"], $HOME . "/normal.txt")',
+        \ 'edit ~/normal.txt',
+        \ 'call assert_equal("", maparg("<CR>", "n"))',
+        \ 'call assert_equal("", maparg("<CR>", "x"))',
+        \ 'call setline(1, "after")',
+        \ 'doautocmd InsertLeave',
+        \ 'doautocmd TextChanged',
+        \ 'doautocmd FocusLost',
+        \ 'call assert_equal(["before"], readfile($HOME . "/normal.txt"))',
+        \ 'call assert_true(&modified)',
+        \ 'doautocmd User DenopsPluginPost:skkeleton',
+        \ 'call assert_equal(0, g:hira_calls)',
+        \ ])
+endfunction
+
+function! s:suite.scratch_has_local_mappings_and_autosave() abort
+  call s:run([
+        \ 'call mkdir($HOME . "/Documents", "p")',
+        \ 'edit ~/Documents/ime-scratch',
+        \ 'call assert_equal(1, maparg("<CR>", "n", 0, 1).buffer)',
+        \ 'call assert_equal(1, maparg("<CR>", "x", 0, 1).buffer)',
+        \ 'call setline(1, "scratch text")',
+        \ 'doautocmd InsertLeave',
+        \ 'call assert_equal(["scratch text"], readfile($HOME . "/Documents/ime-scratch"))',
+        \ 'call assert_false(&modified)',
+        \ 'doautocmd User DenopsPluginPost:skkeleton',
+        \ 'call assert_equal(1, g:hira_calls)',
+        \ 'enew',
+        \ 'call assert_equal("", maparg("<CR>", "n"))',
+        \ 'call assert_equal("", maparg("<CR>", "x"))',
+        \ ])
+endfunction
+
+function! s:suite.renaming_scratch_removes_ime_behavior() abort
+  call s:run([
+        \ 'call mkdir($HOME . "/Documents", "p")',
+        \ 'edit ~/Documents/ime-scratch',
+        \ 'file ~/normal.txt',
+        \ 'call assert_equal("", maparg("<CR>", "n"))',
+        \ 'call assert_equal("", maparg("<CR>", "x"))',
+        \ 'call setline(1, "not autosaved")',
+        \ 'doautocmd TextChanged',
+        \ 'call assert_false(filereadable($HOME . "/normal.txt"))',
+        \ ])
+endfunction
+
+function! s:suite.startup_handles_denops_ready_before_scratch() abort
+  call s:run([
+        \ 'doautocmd User DenopsPluginPost:skkeleton',
+        \ 'call assert_equal(0, g:hira_calls)',
+        \ 'doautocmd VimEnter',
+        \ 'call assert_equal($HOME . "/Documents/ime-scratch", expand("%:p"))',
+        \ 'call assert_true(g:hira_calls > 0)',
+        \ 'call assert_equal(1, maparg("<CR>", "n", 0, 1).buffer)',
+        \ ])
+endfunction

@@ -6,7 +6,7 @@
 # Cross-platform: macOS uses Homebrew, Linux uses apt + curl-installed
 # binaries dropped into ~/.local/bin.
 
-set -e
+set -eo pipefail
 
 # -----------------------------------------------------------------------------
 # Constants
@@ -36,6 +36,7 @@ esac
 # -----------------------------------------------------------------------------
 mkdir -p ~/.local/bin
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/work/dotfiles}"
+DOTFILES_DIR="$(cd "$DOTFILES_DIR" && pwd)"
 
 # Make sure ~/.local/bin and ~/.cargo/bin are visible to *this script*'s
 # subshells, so command -v finds binaries we just installed.
@@ -44,7 +45,7 @@ export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 install_via_brew() {  # $1 = formula
   if [[ "$OS" == macos ]] && command -v brew >/dev/null; then
     brew install "$1"
-    return 0
+    return $?
   fi
   return 1
 }
@@ -52,7 +53,7 @@ install_via_brew() {  # $1 = formula
 install_via_apt() {  # $1 = package
   if [[ "$OS" == linux ]] && command -v apt >/dev/null; then
     sudo apt install -y "$1"
-    return 0
+    return $?
   fi
   return 1
 }
@@ -62,13 +63,17 @@ install_starship() {
   echo "Installing starship..."
   if install_via_brew starship; then return; fi
   # Linux: official installer, scoped to ~/.local/bin.
-  curl -sS https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.local/bin"
+  curl -fsSL https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.local/bin"
 }
 
 install_ghq() {
   command -v ghq >/dev/null && return 0
   echo "Installing ghq..."
   if install_via_brew ghq; then return; fi
+  if [[ "$OS" != linux ]]; then
+    echo "Error: failed to install ghq with Homebrew" >&2
+    return 1
+  fi
   # Linux: prebuilt binary tarball release.
   local arch="amd64"
   [[ "$(uname -m)" == "aarch64" ]] && arch="arm64"
@@ -83,23 +88,28 @@ install_fzf() {
   echo "Installing fzf..."
   if install_via_brew fzf; then return; fi
   if install_via_apt fzf; then return; fi
+  echo "Error: could not install fzf" >&2
+  return 1
 }
 
 install_delta() {
   command -v delta >/dev/null && return 0
   echo "Installing delta..."
   if install_via_brew git-delta; then return; fi
-  # Linux: prebuilt .deb from the upstream release. apt has it too on
+  # Linux: prebuilt tarball from the upstream release. apt has it too on
   # newer Ubuntu, but Jammy / WSL2 default repos don't.
   if [[ "$OS" == linux ]]; then
     if install_via_apt git-delta; then return; fi
-    local arch="amd64"
-    [[ "$(uname -m)" == "aarch64" ]] && arch="arm64"
+    local arch="x86_64"
+    [[ "$(uname -m)" == "aarch64" ]] && arch="aarch64"
     local ver="0.18.2"
     local tmp; tmp=$(mktemp -d)
-    curl -fsSL "https://github.com/dandavison/delta/releases/download/${ver}/delta-${ver}-x86_64-unknown-linux-gnu.tar.gz" -o "$tmp/delta.tgz"
-    (cd "$tmp" && tar xzf delta.tgz && mv "delta-${ver}-x86_64-unknown-linux-gnu/delta" "$HOME/.local/bin/")
+    curl -fsSL "https://github.com/dandavison/delta/releases/download/${ver}/delta-${ver}-${arch}-unknown-linux-gnu.tar.gz" -o "$tmp/delta.tgz"
+    (cd "$tmp" && tar xzf delta.tgz && mv "delta-${ver}-${arch}-unknown-linux-gnu/delta" "$HOME/.local/bin/")
     rm -rf "$tmp"
+  else
+    echo "Error: failed to install delta with Homebrew" >&2
+    return 1
   fi
 }
 
@@ -110,6 +120,9 @@ install_deno() {
   curl -fsSL https://deno.land/install.sh | sh
   if [ -x "$HOME/.deno/bin/deno" ]; then
     ln -sf "$HOME/.deno/bin/deno" "$HOME/.local/bin/deno"
+  else
+    echo "Error: the Deno installer did not create a binary" >&2
+    return 1
   fi
 }
 
@@ -122,7 +135,8 @@ install_jq() {
     sudo yum install -y jq
     return
   fi
-  echo "Warning: don't know how to install jq on this OS"
+  echo "Error: could not install jq" >&2
+  return 1
 }
 
 install_ripgrep() {
@@ -130,7 +144,8 @@ install_ripgrep() {
   echo "Installing ripgrep..."
   if install_via_brew ripgrep; then return; fi
   if install_via_apt ripgrep; then return; fi
-  echo "Warning: don't know how to install ripgrep on this OS"
+  echo "Error: could not install ripgrep" >&2
+  return 1
 }
 
 # Official `agy install` appends a PATH block to every shell profile it
@@ -169,13 +184,38 @@ install_agy() {
   strip_agy_installer_path_block
 }
 
+backup_config() {
+  local target="$1" backup
+  if [[ -e "$target" || -L "$target" ]]; then
+    backup="$(mktemp -d "${target}.backup.XXXXXX")"
+    mv "$target" "$backup/original"
+    echo "Saved existing config: $backup/original"
+  fi
+}
+
+link_config() {
+  local source="$1" target="$2"
+  if [[ ! -e "$source" ]]; then
+    echo "Error: config source does not exist: $source" >&2
+    return 1
+  fi
+  if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$target")"
+  backup_config "$target"
+  ln -sfn "$source" "$target"
+}
+
+# docserver needs jq before its service is started.
+install_jq
+
 # -----------------------------------------------------------------------------
 # Symlink config files
 # -----------------------------------------------------------------------------
 if [[ "$OS" != windows ]]; then
-  ln -sf "$DOTFILES_DIR/.vimrc" ~/.vimrc
-  ln -sf "$DOTFILES_DIR/.ctags" ~/.ctags
-  ln -sf "$DOTFILES_DIR/.ctags.d" ~/.ctags.d
+  link_config "$DOTFILES_DIR/.vimrc" "$HOME/.vimrc"
+  link_config "$DOTFILES_DIR/.config/vim-ime/vimrc" "$HOME/.config/vim-ime/vimrc"
 fi
 ln -sf "$DOTFILES_DIR/zsh/.zshrc" ~/.zshrc
 
@@ -196,7 +236,7 @@ fi
 
 mkdir -p ~/.config/fish/functions
 ln -sf "$DOTFILES_DIR/fish/config.fish" ~/.config/fish/config.fish
-ln -sf "$DOTFILES_DIR/fish/functions/fish_prompt.fish" ~/.config/fish/functions/fish_prompt.fish
+ln -sf "$DOTFILES_DIR/fish/functions/neovide.fish" ~/.config/fish/functions/neovide.fish
 
 ln -sf "$DOTFILES_DIR/bin/sshs" ~/.local/bin/sshs
 ln -sf "$DOTFILES_DIR/bin/docserver" ~/.local/bin/docserver
@@ -280,7 +320,9 @@ fi
 # into ~/.vim/ so Vim's :h packages mechanism finds them.
 mkdir -p "$HOME/.vim/autoload" "$HOME/.vim/test"
 ln -sf "$DOTFILES_DIR/.vim/autoload/vim_ime.vim" "$HOME/.vim/autoload/vim_ime.vim"
-ln -sf "$DOTFILES_DIR/.vim/test/vim_ime.vimspec" "$HOME/.vim/test/vim_ime.vimspec"
+for spec in "$DOTFILES_DIR"/.vim/test/*.vimspec; do
+  link_config "$spec" "$HOME/.vim/test/$(basename "$spec")"
+done
 
 # -----------------------------------------------------------------------------
 # macOS-only desktop integration
@@ -291,7 +333,7 @@ if [[ "$OS" == macos ]]; then
     echo "Installing Hammerspoon..."
     brew install --cask hammerspoon
   fi
-  ln -sf "$DOTFILES_DIR/.hammerspoon" ~/.hammerspoon
+  link_config "$DOTFILES_DIR/.hammerspoon" "$HOME/.hammerspoon"
 
   # iTerm2: PrefsCustomFolder + per-profile defaults that don't sync via
   # the shared plist. Without this, the "Japanese Input" profile (which
@@ -304,11 +346,11 @@ if [[ "$OS" == macos ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Neovim plugin symlinks (LazyVim is bootstrapped by lazy.nvim itself
-# when nvim first runs; we just make sure our custom plugin specs are
-# there to be picked up).
+# Neovim entry point, LazyVim bootstrap and plugin/config symlinks.
 # -----------------------------------------------------------------------------
 mkdir -p ~/.config/nvim/lua/plugins ~/.config/nvim/lua/config
+backup_config "$HOME/.config/nvim/init.vim"
+link_config "$DOTFILES_DIR/.config/nvim/init.lua" "$HOME/.config/nvim/init.lua"
 
 # Remove orphaned symlinks first
 for link in ~/.config/nvim/lua/plugins/*.lua ~/.config/nvim/lua/config/*.lua; do
@@ -319,30 +361,15 @@ done
 # Create symlinks for all custom plugins
 for plugin in "$DOTFILES_DIR"/.config/nvim/lua/plugins/*.lua; do
   if [ -f "$plugin" ]; then
-    ln -sf "$plugin" ~/.config/nvim/lua/plugins/"$(basename "$plugin")"
+    link_config "$plugin" "$HOME/.config/nvim/lua/plugins/$(basename "$plugin")"
   fi
 done
-# lua/config/ holds dotfiles-managed config snippets that need to load before
-# lazy.nvim (e.g. neovide GUI font). lua/config/options.lua itself stays in
-# the LazyVim template and is responsible for `require`ing these.
+# options.lua loads clipboard/neovide settings; lazy.lua disables netrwPlugin.
 for cfg in "$DOTFILES_DIR"/.config/nvim/lua/config/*.lua; do
   if [ -f "$cfg" ]; then
-    ln -sf "$cfg" ~/.config/nvim/lua/config/"$(basename "$cfg")"
+    link_config "$cfg" "$HOME/.config/nvim/lua/config/$(basename "$cfg")"
   fi
 done
-
-# LazyVim's template lua/config/lazy.lua ships with `netrwPlugin`
-# commented out of the disabled_plugins list, so netrw stays loaded and
-# fights neo-tree (both pop up when you `nvim ./somedir`). Flip the
-# comment off in place. Idempotent: we only sed the still-commented form.
-NVIM_LAZY=~/.config/nvim/lua/config/lazy.lua
-if [ -f "$NVIM_LAZY" ] && grep -q '^[[:space:]]*-- "netrwPlugin",' "$NVIM_LAZY"; then
-  if [[ "$OS" == macos ]]; then
-    sed -i '' 's|-- "netrwPlugin",|"netrwPlugin",|' "$NVIM_LAZY"
-  else
-    sed -i 's|-- "netrwPlugin",|"netrwPlugin",|' "$NVIM_LAZY"
-  fi
-fi
 
 # -----------------------------------------------------------------------------
 # fish + tmux plugin managers
@@ -361,7 +388,6 @@ install_ghq
 install_fzf
 install_delta
 install_deno
-install_jq
 install_ripgrep
 install_agy
 

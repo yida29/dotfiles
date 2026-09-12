@@ -29,9 +29,12 @@ Things that broke once and we'd rather not rediscover.
 - **`hs.pathwatcher` doesn't follow symlinks transparently.** macOS will
   resolve a symlink to its target for the *initial* path, but writes
   that happen via the original path (e.g. a `git pull` into
-  `~/dotfiles/.hammerspoon/`) are not picked up by a watcher pointed at
-  `~/.hammerspoon/`. We watch both paths in `init.lua` so reloads work
-  no matter which side of the symlink the change came from.
+  `~/work/dotfiles/.hammerspoon/`) need a watcher on the actual target.
+  `init.lua` resolves `hs.configdir` (normally `~/.hammerspoon/`) with
+  `hs.fs.pathToAbsolute` instead of assuming a checkout path, so a
+  `DOTFILES_DIR` override works too. Preserve an existing real
+  `~/.hammerspoon` directory with the installer's backup helper before
+  replacing it with the directory symlink; never nest a link inside it.
 
 ## iTerm2 hotkey window title
 
@@ -75,7 +78,7 @@ Things that broke once and we'd rather not rediscover.
   is *not* covered by tests; verify those manually.
 
   ```sh
-  cd ~/dotfiles/.hammerspoon && busted test/
+  cd ~/work/dotfiles/.hammerspoon && busted test/
   ```
 
 - **Don't try to mock `hs.*` to test wider areas.** The Hammerspoon API

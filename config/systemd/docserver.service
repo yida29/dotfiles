@@ -13,7 +13,6 @@
 
 [Unit]
 Description=Per-host static doc server (sshs companion)
-After=default.target
 
 [Service]
 Type=simple

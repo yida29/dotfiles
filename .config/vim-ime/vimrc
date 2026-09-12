@@ -1,0 +1,2 @@
+" Keep the existing iTerm2 hotkey command compatible with the shared config.
+source ~/.vimrc

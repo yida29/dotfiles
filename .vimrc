@@ -1,7 +1,7 @@
 " =============================================================================
 " .vimrc — used purely as a SKK Japanese-input pad these days. Coding lives
 " in Neovim (~/.config/nvim). When Vim launches (Cmd+J hotkey window, git
-" commit, etc.) it opens straight into hira mode.
+" commit, etc.) only the IME scratch buffer opens in hira mode.
 "
 " Plugins (denops.vim, skkeleton, vim-hybrid) live under ~/.vim/pack/plugins/
 " start/ and are loaded by Vim's native :h packages mechanism. install.sh
@@ -32,6 +32,7 @@ endif
 let s:scratch_file = expand('~/Documents/ime-scratch')
 let s:skk_dict     = expand('~/.skk/SKK-JISYO.L')
 let s:commit_url   = 'hammerspoon://nvim-ime-commit'
+let s:skkeleton_ready = 0
 
 " iTerm2's hotkey window may launch Vim via `bash -c`, which bypasses .zshrc
 " / .bashrc, so $PATH only contains the system defaults. denops needs `deno`
@@ -293,6 +294,22 @@ cmap <C-j> <Plug>(skkeleton-enable)
 " -----------------------------------------------------------------------------
 " Helpers.
 " -----------------------------------------------------------------------------
+function! s:is_scratch() abort
+  return expand('%:p') ==# s:scratch_file
+endfunction
+
+function! s:configure_scratch() abort
+  if s:is_scratch()
+    nnoremap <silent> <buffer> <CR> :call <SID>commit_line()<CR>
+    xnoremap <silent> <buffer> <CR> :<C-u>call <SID>commit_selection()<CR>
+    let b:vim_ime_scratch = 1
+  elseif get(b:, 'vim_ime_scratch', 0)
+    nunmap <buffer> <CR>
+    xunmap <buffer> <CR>
+    unlet b:vim_ime_scratch
+  endif
+endfunction
+
 function! s:ensure_trailing_blank_line() abort
   if vim_ime#needs_trailing_blank(getline(1, '$'))
     call append(line('$'), '')
@@ -300,6 +317,7 @@ function! s:ensure_trailing_blank_line() abort
 endfunction
 
 function! s:open_scratch_at_bottom() abort
+  call mkdir(fnamemodify(s:scratch_file, ':h'), 'p')
   if !filereadable(s:scratch_file)
     call writefile([], s:scratch_file)
   endif
@@ -312,37 +330,46 @@ function! s:open_scratch_at_bottom() abort
   call s:ensure_trailing_blank_line()
   normal! G$
   startinsert!
+  call s:enter_hira()
 endfunction
 
 function! s:enter_hira() abort
+  if !s:is_scratch() || !s:skkeleton_ready
+    return
+  endif
   if mode() !~# 'i'
     startinsert!
   endif
-  silent! call skkeleton#handle('enable', {})
+  call skkeleton#handle('enable', {})
 endfunction
 
 function! s:commit_and_quit() abort
+  silent write
   call system('open -g ' . shellescape(s:commit_url))
-  silent! wall
-  qa!
+  if v:shell_error
+    throw 'vim-ime: failed to hand off to Hammerspoon'
+  endif
+  qa
 endfunction
 
 function! s:autosave() abort
-  if &modified && &buftype ==# '' && expand('%') !=# ''
-    silent! write
+  if s:is_scratch() && &modified && &buftype ==# ''
+    silent write
   endif
 endfunction
 
 " -----------------------------------------------------------------------------
 " Startup: only auto-open the scratch file when Vim is launched with no
 " arguments (i.e. plain `vim` or the iTerm2 hotkey window). When invoked
-" with a file (e.g. `vim foo.md`, `git commit`'s COMMIT_EDITMSG), respect
-" that file but still drop into hira mode for convenience.
+" with an ordinary file (e.g. `vim foo.md`, git's COMMIT_EDITMSG), leave
+" its input mode and save/quit behaviour alone.
 " -----------------------------------------------------------------------------
 augroup vim_ime_startup
   autocmd!
+  autocmd BufEnter,BufFilePost * call s:configure_scratch()
   autocmd VimEnter * if argc() == 0 | call s:open_scratch_at_bottom() | endif
-  autocmd User DenopsPluginPost:skkeleton call s:enter_hira()
+  autocmd VimEnter * call s:configure_scratch() | call s:enter_hira()
+  autocmd User DenopsPluginPost:skkeleton let s:skkeleton_ready = 1 | call s:enter_hira()
 augroup END
 
 " -----------------------------------------------------------------------------
@@ -353,24 +380,26 @@ augroup END
 " normally (so it doesn't break git commit messages, etc.).
 " -----------------------------------------------------------------------------
 function! s:commit_line() abort
+  if !s:is_scratch()
+    throw 'vim-ime: only the scratch buffer can be sent'
+  endif
   call setreg('+', getline('.'))
   call s:commit_and_quit()
 endfunction
 
 function! s:commit_selection() abort
+  if !s:is_scratch()
+    throw 'vim-ime: only the scratch buffer can be sent'
+  endif
   silent normal! gv"+y
   call setreg('+', substitute(getreg('+'), '\n$', '', ''))
   call s:commit_and_quit()
 endfunction
 
-nnoremap <silent> <CR> :call <SID>commit_line()<CR>
-xnoremap <silent> <CR> :<C-u>call <SID>commit_selection()<CR>
-
 " -----------------------------------------------------------------------------
-" Auto-save the scratch buffer so :qa! never has to discard unsaved edits.
+" Auto-save only the scratch buffer.
 " -----------------------------------------------------------------------------
 augroup vim_ime_autosave
   autocmd!
   autocmd InsertLeave,TextChanged,FocusLost * call s:autosave()
 augroup END
-
