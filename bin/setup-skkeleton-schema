@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Use the bundled JISYO schema without changing other skkeleton imports."""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import re
+import shutil
+import tempfile
+
+
+SOURCE = "https://cdn.jsdelivr.net/gh/skk-dict/jisyo/schema/jisyo.schema.v0.0.0.json"
+SHA256 = "339d73e539e3837677bd348a8b8e889deea44d946b11cd075d629c189b3906a1"
+SCHEMA = Path(__file__).resolve().parent.parent / ".skk/jisyo.schema.v0.0.0.json"
+
+
+def configure(config_path):
+    schema = SCHEMA.read_bytes()
+    if hashlib.sha256(schema).hexdigest() != SHA256:
+        raise ValueError(f"Unexpected bundled schema contents: {SCHEMA}")
+    json.loads(schema)
+
+    config_path = config_path.resolve(strict=True)
+    original = config_path.read_bytes()
+    config = json.loads(original)
+    local_uri = SCHEMA.as_uri()
+    current = config["imports"]["jisyo/schema"]
+    if current == local_uri:
+        print(f"Already using local schema: {SCHEMA}")
+        return
+    if current != SOURCE:
+        raise ValueError(f"Refusing to replace unfamiliar jisyo/schema: {current}")
+
+    # Preserve all formatting and unrelated plugin settings.
+    pattern = r'("jisyo/schema"\s*:\s*)"(?:[^"\\]|\\.)*"'
+    updated, count = re.subn(
+        pattern, lambda match: match[1] + json.dumps(local_uri),
+        original.decode("utf-8"),
+    )
+    if count != 1:
+        raise ValueError("Expected exactly one jisyo/schema import")
+    config["imports"]["jisyo/schema"] = local_uri
+    if json.loads(updated) != config:
+        raise ValueError("Unexpected changes to skkeleton config")
+
+    backup = Path(tempfile.mkdtemp(
+        prefix=config_path.name + ".backup.", dir=config_path.parent,
+    )) / "original"
+    shutil.copy2(config_path, backup)
+    print(f"Saved existing config: {backup}")
+    with tempfile.NamedTemporaryFile(dir=config_path.parent, delete=False) as out:
+        temporary = Path(out.name)
+        try:
+            out.write(updated.encode("utf-8"))
+            out.flush()
+            shutil.copymode(config_path, temporary)
+            temporary.replace(config_path)
+        finally:
+            temporary.unlink(missing_ok=True)
+    print(f"Using local schema: {SCHEMA}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--config", type=Path,
+        default=Path.home() / ".vim/pack/plugins/start/skkeleton/denops/skkeleton/deno.json",
+        help="skkeleton deno.json (defaults to the installed Vim package)",
+    )
+    configure(parser.parse_args().config)

@@ -237,6 +237,7 @@ fi
 mkdir -p ~/.config/fish/functions
 ln -sf "$DOTFILES_DIR/fish/config.fish" ~/.config/fish/config.fish
 ln -sf "$DOTFILES_DIR/fish/functions/neovide.fish" ~/.config/fish/functions/neovide.fish
+link_config "$DOTFILES_DIR/fish/functions/netwatch.fish" "$HOME/.config/fish/functions/netwatch.fish"
 
 ln -sf "$DOTFILES_DIR/bin/sshs" ~/.local/bin/sshs
 ln -sf "$DOTFILES_DIR/bin/docserver" ~/.local/bin/docserver
@@ -299,6 +300,7 @@ mkdir -p "$VIM_PACK"
   && git clone --depth 1 https://github.com/vim-denops/denops.vim "$VIM_PACK/denops.vim"
 [ ! -d "$VIM_PACK/skkeleton" ] \
   && git clone --depth 1 https://github.com/vim-skk/skkeleton "$VIM_PACK/skkeleton"
+python3 "$DOTFILES_DIR/bin/setup-skkeleton-schema"
 
 # Japanese-traditional-color schemes (sabineko, etc).
 if [ ! -d "$VIM_PACK/azuma-vim-colorschemes" ]; then

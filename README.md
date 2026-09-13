@@ -12,6 +12,14 @@ Personal configuration files for Vim, Neovim, Fish shell, tmux, and other develo
 - Neovim LSP integration
 - GitHub Copilot support
 
+## Network monitor (macOS)
+
+Run `netwatch` in Fish; stop with Ctrl-C. It pings `1.1.1.1` with a 500 ms
+reply timeout, prints the initial state and subsequent state changes with
+timestamps, plays Sosumi on every offline iteration and Glass on recovery,
+then sleeps 0.2 seconds. Sound playback is synchronous, as in the original
+shell loop. This monitors ICMP reachability, not DNS or HTTP availability.
+
 ## Install
 
 Prerequisites: Git, curl, Python 3, fish, tmux, and a Neovim version
@@ -54,3 +62,26 @@ do not blindly rerun the full installer during deployment.
 
 Claude settings are seeded from `.claude/settings.json.example`, not
 symlinked. SKK learning is per-host; `.skk/userJisyo` is ignored, not shared.
+
+## Offline IME schema
+
+`.skk/jisyo.schema.v0.0.0.json` is an unmodified local copy of the
+[upstream JISYO schema](https://cdn.jsdelivr.net/gh/skk-dict/jisyo/schema/jisyo.schema.v0.0.0.json)
+(Git blob `7574ef731a2b915d7cf12c36b036539c97025d08`).
+Denops' import-map transformer fetches HTTP imports directly, independently
+of Deno's module cache. The installer changes only skkeleton's `jisyo/schema`
+import to this local file so starting the IME does not fetch the schema.
+
+On existing hosts, run from the checkout without running the full installer:
+
+```sh
+python3 bin/setup-skkeleton-schema
+```
+
+Restart the IME Vim afterward. The script preserves the previous plugin
+config at `deno.json.backup.*/original` and is a no-op when already configured.
+This intentionally changes the installed skkeleton clone's `deno.json`;
+review that local change before updating the plugin and rerun the script if
+an update restores the remote URL. Unknown schema URLs are rejected rather
+than silently overwritten. Other Deno dependencies still need to be cached
+before using the IME offline.
