@@ -14,11 +14,17 @@ Personal configuration files for Vim, Neovim, Fish shell, tmux, and other develo
 
 ## Network monitor (macOS)
 
-Run `netwatch` in Fish; stop with Ctrl-C. It pings `1.1.1.1` with a 500 ms
-reply timeout, prints the initial state and subsequent state changes with
-timestamps, plays Sosumi on every offline iteration and Glass on recovery,
-then sleeps 0.2 seconds. Sound playback is synchronous, as in the original
-shell loop. This monitors ICMP reachability, not DNS or HTTP availability.
+Run `netwatch` in Fish; stop with Ctrl-C. It checks HTTPS access to
+`https://www.apple.com/`, falling back to `https://www.google.com/` if the
+first request fails. Each request has a 2-second connection timeout and a
+3-second total timeout; HTTP errors count as failures and curl config is
+ignored. Two consecutive successful iterations confirm online status;
+three consecutive iterations where both requests fail confirm offline
+status. Confirmed state changes are printed with timestamps. Sosumi plays
+on every offline iteration (including the first successful recovery probe),
+and Glass plays once recovery is confirmed. Each iteration then sleeps
+0.5 seconds; sound playback is synchronous. This monitors HTTPS access to
+these endpoints, not connectivity to every site.
 
 ## Install
 
