@@ -91,3 +91,33 @@ review that local change before updating the plugin and rerun the script if
 an update restores the remote URL. Unknown schema URLs are rejected rather
 than silently overwritten. Other Deno dependencies still need to be cached
 before using the IME offline.
+
+## Local uncensored model for OpenCode
+
+`yida-MS-7E80` serves the uncensored Qwen3.8-27B through llama-swap at
+`http://100.75.7.46:8080/v1`. It is reachable only over Tailscale; the model
+list and launch flags live in `/home/yida/llama-swap/config.yaml` there.
+
+Every host can expose it to its own OpenCode with:
+
+```sh
+bin/opencode-local-llm
+```
+
+The script inserts a `providers.llama-swap` entry into
+`~/.config/opencode/opencode.json(c)`, keeps other settings and JSONC
+comments intact, writes a timestamped backup, and is a no-op when the
+provider is already present. Restart OpenCode (or `opencode reload`) and pick
+`llama-swap/qwen3.8-27b-uncensored`.
+
+`stb` runs tailscaled with `--tun=userspace-networking`, so it cannot route
+the Tailscale address. It points at a local SSH tunnel instead:
+
+```sh
+bin/opencode-local-llm --base-url http://127.0.0.1:18080/v1
+```
+
+`config/launchd/com.yida.opencode-llama-tunnel.plist` keeps
+`127.0.0.1:18080` forwarded to llama-swap over `ssh ubuntu` (ProxyJump
+`home`); install it in `~/Library/LaunchAgents/` and bootstrap it with
+`launchctl`. That host can then use the model without a VPN interface.

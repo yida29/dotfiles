@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""Make the Ubuntu llama-swap model available to OpenCode on this host.
+
+Adds a `providers.llama-swap` entry to the global OpenCode config
+(`~/.config/opencode/opencode.json(c)`) and leaves every other setting
+untouched. The file is edited textually so JSONC comments survive, then
+re-parsed so a broken edit never lands.
+
+The model is the uncensored Qwen3.8-27B served by llama-swap on
+yida-MS-7E80 over Tailscale (see /home/yida/llama-swap/config.yaml there).
+
+Usage:
+  bin/opencode-local-llm [--base-url URL] [--config PATH] [--dry-run]
+
+Default base URL: http://100.75.7.46:8080/v1
+
+Hosts that cannot route Tailscale IPs (stb runs tailscaled with
+--tun=userspace-networking, so only `tailscale nc` works) should point at
+the local SSH tunnel instead:
+
+  bin/opencode-local-llm --base-url http://127.0.0.1:18080/v1
+
+The tunnel itself is config/launchd/com.yida.opencode-llama-tunnel.plist.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import shutil
+import sys
+import time
+from pathlib import Path
+
+DEFAULT_BASE_URL = "http://100.75.7.46:8080/v1"
+MODEL_ID = "qwen3.8-27b-uncensored"
+
+
+def jsonc_to_json(text: str) -> str:
+    """Strip // and /* */ comments plus trailing commas, string-aware."""
+    out: list[str] = []
+    i, n = 0, len(text)
+    in_str = False
+    escaped = False
+    while i < n:
+        ch = text[i]
+        if in_str:
+            out.append(ch)
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_str = False
+            i += 1
+            continue
+        if ch == '"':
+            in_str = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "/" and i + 1 < n:
+            nxt = text[i + 1]
+            if nxt == "/":
+                end = text.find("\n", i)
+                if end == -1:
+                    break
+                i = end  # keep the newline
+                continue
+            if nxt == "*":
+                end = text.find("*/", i + 2)
+                if end == -1:
+                    break
+                i = end + 2
+                continue
+        out.append(ch)
+        i += 1
+    return re.sub(r",(\s*[}\]])", r"\1", "".join(out))
+
+
+def load_jsonc(text: str) -> dict:
+    data = json.loads(jsonc_to_json(text))
+    if not isinstance(data, dict):
+        raise ValueError("top-level value is not an object")
+    return data
+
+
+def provider_block(indent: str, base_url: str) -> str:
+    """The llama-swap provider entry, indented for its parent object."""
+    return (
+        f'{indent}"llama-swap": {{\n'
+        f'{indent}  "name": "llama-swap (local)",\n'
+        f'{indent}  "package": "@opencode/ai/providers/openai-compatible",\n'
+        f'{indent}  "settings": {{ "baseURL": "{base_url}" }},\n'
+        f'{indent}  "models": {{\n'
+        f'{indent}    "{MODEL_ID}": {{\n'
+        f'{indent}      "name": "Qwen3.8-27B Uncensored",\n'
+        f'{indent}      "capabilities": {{ "tools": true, "input": ["text"], "output": ["text"] }},\n'
+        f'{indent}      "limit": {{ "context": 102400, "output": 8192 }}\n'
+        f'{indent}    }}\n'
+        f'{indent}  }}\n'
+        f'{indent}}}'
+    )
+
+
+def line_indent(text: str, pos: int) -> str:
+    start = text.rfind("\n", 0, pos) + 1
+    prefix = text[start:pos]
+    return prefix[: len(prefix) - len(prefix.lstrip(" \t"))]
+
+
+def insert_provider(text: str, base_url: str) -> str:
+    key = re.search(r'"providers"\s*:', text)
+    if key:
+        brace = text.find("{", key.end())
+        if brace == -1:
+            raise ValueError('found "providers" but no opening brace')
+        indent = line_indent(text, key.start()) + "  "
+        after = text[brace + 1 :].lstrip()
+        tail = "," if after[:1] not in ("}", "") else ""
+        addition = "\n" + provider_block(indent, base_url) + tail
+        return text[: brace + 1] + addition + text[brace + 1 :]
+
+    close = len(text.rstrip()) - 1
+    if text[close] != "}":
+        raise ValueError("cannot find the top-level closing brace")
+    before = text[:close].rstrip()
+    comma = "" if before.endswith("{") else ","
+    addition = (
+        f'{comma}\n  "providers": {{\n'
+        + provider_block("    ", base_url)
+        + "\n  }\n"
+    )
+    return before + addition + text[close:]
+
+
+def find_config(explicit: str | None) -> Path:
+    if explicit:
+        return Path(explicit).expanduser()
+    base = Path.home() / ".config" / "opencode"
+    for name in ("opencode.jsonc", "opencode.json"):
+        candidate = base / name
+        if candidate.exists():
+            return candidate
+    return base / "opencode.jsonc"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
+    parser.add_argument("--config", default=None)
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+
+    path = find_config(args.config)
+    created = not path.exists()
+    text = path.read_text(encoding="utf-8") if not created else '{\n  "$schema": "https://opencode.ai/config.json"\n}\n'
+
+    try:
+        data = load_jsonc(text)
+    except (ValueError, json.JSONDecodeError) as exc:
+        print(f"{path}: not valid JSONC ({exc}); refusing to edit", file=sys.stderr)
+        return 1
+
+    providers = data.get("providers")
+    if isinstance(providers, dict) and "llama-swap" in providers:
+        url = providers["llama-swap"].get("settings", {}).get("baseURL", "?")
+        print(f"{path}: llama-swap already configured ({url}); nothing to do")
+        return 0
+
+    try:
+        updated = insert_provider(text, args.base_url)
+        new_data = load_jsonc(updated)
+    except (ValueError, json.JSONDecodeError) as exc:
+        print(f"{path}: edit would produce invalid JSONC ({exc}); not written", file=sys.stderr)
+        return 1
+
+    got = new_data.get("providers", {}).get("llama-swap", {})
+    if got.get("settings", {}).get("baseURL") != args.base_url:
+        print(f"{path}: baseURL did not land as expected", file=sys.stderr)
+        return 1
+
+    if args.dry_run:
+        print(updated)
+        return 0
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not created:
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        backup = path.with_name(f"{path.name}.backup.{stamp}")
+        shutil.copy2(path, backup)
+        print(f"backup: {backup}")
+    path.write_text(updated, encoding="utf-8")
+    print(f"{path}: added providers.llama-swap -> {args.base_url}")
+    print("Restart OpenCode (or `opencode reload`) and pick llama-swap/" + MODEL_ID)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

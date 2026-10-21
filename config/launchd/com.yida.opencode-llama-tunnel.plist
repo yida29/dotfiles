@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    stb runs tailscaled with --tun=userspace-networking, so it cannot route
+    100.75.7.46 directly. This keeps a local port open that forwards over
+    SSH (ProxyJump home, from ~/.ssh/config) to llama-swap on the Ubuntu
+    box, which is what OpenCode's llama-swap provider points at
+    (http://127.0.0.1:18080/v1).
+
+    Install on stb only:
+      ln -s ~/work/dotfiles/config/launchd/com.yida.opencode-llama-tunnel.plist \
+        ~/Library/LaunchAgents/
+      launchctl bootout gui/$(id -u)/com.yida.opencode-llama-tunnel 2>/dev/null || true
+      launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.yida.opencode-llama-tunnel.plist
+  -->
+  <key>Label</key>
+  <string>com.yida.opencode-llama-tunnel</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/ssh</string>
+    <string>-N</string>
+    <string>-o</string><string>BatchMode=yes</string>
+    <string>-o</string><string>ExitOnForwardFailure=yes</string>
+    <string>-o</string><string>ServerAliveInterval=15</string>
+    <string>-o</string><string>ServerAliveCountMax=3</string>
+    <string>-L</string><string>127.0.0.1:18080:100.75.7.46:8080</string>
+    <string>ubuntu</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/opencode-llama-tunnel.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/opencode-llama-tunnel.log</string>
+</dict>
+</plist>
