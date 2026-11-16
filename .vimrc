@@ -32,6 +32,7 @@ endif
 let s:scratch_file = expand('~/Documents/ime-scratch')
 let s:skk_dict     = expand('~/.skk/SKK-JISYO.L')
 let s:commit_url   = 'hammerspoon://nvim-ime-commit'
+let s:commit_reg   = has('clipboard') ? '+' : '"'
 let s:skkeleton_ready = 0
 
 " iTerm2's hotkey window may launch Vim via `bash -c`, which bypasses .zshrc
@@ -52,7 +53,11 @@ set noruler
 " Vim print "-- INSERT --" in the command line area.
 set noshowmode
 set noshowcmd
-set clipboard=unnamedplus
+" WSL's Vim is built without clipboard support (-clipboard); there the
+" pad hands text over via $VIM_IME_COMMIT instead (see s:commit_and_quit).
+if has('clipboard')
+  set clipboard=unnamedplus
+endif
 set noswapfile
 set nobackup
 set nowritebackup
@@ -345,9 +350,16 @@ endfunction
 
 function! s:commit_and_quit() abort
   silent write
-  call system('open -g ' . shellescape(s:commit_url))
-  if v:shell_error
-    throw 'vim-ime: failed to hand off to Hammerspoon'
+  if !empty($VIM_IME_COMMIT)
+    " Windows/WSL: windows/vim-ime.ahk launched this pad and is waiting for
+    " its window to close; it reads this file and pastes into the previous
+    " window. WSL's Vim has no clipboard, so hand the text over via a file.
+    call writefile(split(getreg(s:commit_reg), "\n", 1), $VIM_IME_COMMIT, 'b')
+  else
+    call system('open -g ' . shellescape(s:commit_url))
+    if v:shell_error
+      throw 'vim-ime: failed to hand off to Hammerspoon'
+    endif
   endif
   qa
 endfunction
@@ -383,7 +395,7 @@ function! s:commit_line() abort
   if !s:is_scratch()
     throw 'vim-ime: only the scratch buffer can be sent'
   endif
-  call setreg('+', getline('.'))
+  call setreg(s:commit_reg, getline('.'))
   call s:commit_and_quit()
 endfunction
 
@@ -391,8 +403,8 @@ function! s:commit_selection() abort
   if !s:is_scratch()
     throw 'vim-ime: only the scratch buffer can be sent'
   endif
-  silent normal! gv"+y
-  call setreg('+', substitute(getreg('+'), '\n$', '', ''))
+  execute 'silent normal! gv"' . s:commit_reg . 'y'
+  call setreg(s:commit_reg, substitute(getreg(s:commit_reg), '\n$', '', ''))
   call s:commit_and_quit()
 endfunction
 

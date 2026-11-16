@@ -69,6 +69,32 @@ do not blindly rerun the full installer during deployment.
 Claude settings are seeded from `.claude/settings.json.example`, not
 symlinked. SKK learning is per-host; `.skk/userJisyo` is ignored, not shared.
 
+## Windows (WSL)
+
+WezTerm + AutoHotkey v2 stand in for iTerm2 + Hammerspoon. Install them and
+the font on the Windows side, then run `install.sh` inside WSL (Ubuntu):
+
+```powershell
+winget install -e --id wez.wezterm
+winget install -e --id AutoHotkey.AutoHotkey
+winget install -e --id DEVCOM.JetBrainsMonoNerdFont
+```
+
+`install.sh` copies `wezterm/wezterm.lua` to `%USERPROFILE%\.wezterm.lua`
+and `windows/vim-ime.ahk` into the Startup folder (copies, not symlinks —
+re-run that block after editing either file). WezTerm opens the `Ubuntu`
+WSL distro, where tmux starts fish.
+
+`Alt+J` opens the SKK pad (`bin/vim-ime` in a small WezTerm window). Enter
+commits: Vim writes the text to `$VIM_IME_COMMIT` (WSL's Vim has no
+clipboard) and quits; the AutoHotkey script then refocuses the previous
+window and pastes (Ctrl+Shift+V into WezTerm, Ctrl+V elsewhere).
+
+`sshs` opens one WezTerm tab per host (via `wezterm cli spawn`) instead of
+iTerm2 tabs; tabs are colored from `hosts.json`. `Alt+1`..`Alt+8` jump to
+that tab and `Alt+9` to the last one (iTerm2's `Cmd+N`). Reaching the hosts
+needs Tailscale on Windows and `Host <alias>` entries in `~/.ssh/config`.
+
 ## Offline IME schema
 
 `.skk/jisyo.schema.v0.0.0.json` is an unmodified local copy of the

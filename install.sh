@@ -241,6 +241,7 @@ link_config "$DOTFILES_DIR/fish/functions/netwatch.fish" "$HOME/.config/fish/fun
 
 ln -sf "$DOTFILES_DIR/bin/sshs" ~/.local/bin/sshs
 ln -sf "$DOTFILES_DIR/bin/docserver" ~/.local/bin/docserver
+ln -sf "$DOTFILES_DIR/bin/vim-ime" ~/.local/bin/vim-ime
 
 # sshs reads its host registry (aliases, tab colors, default forward
 # ports, Tailscale names) from ~/.config/sshs/hosts.json. Same file on
@@ -345,6 +346,23 @@ if [[ "$OS" == macos ]]; then
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
   defaults write com.googlecode.iterm2 \
     "NeverWarnAboutShortLivedSessions_${ITERM2_JAPANESE_PROFILE_GUID}" -bool true
+fi
+
+# -----------------------------------------------------------------------------
+# Windows (WSL) desktop integration — WezTerm + AutoHotkey replace
+# iTerm2 + Hammerspoon. WezTerm, AutoHotkey v2 and the JetBrainsMono Nerd
+# Font are installed on the Windows side with winget (see README).
+# Windows can't follow WSL symlinks, so these are copies: re-run this block
+# after editing wezterm/wezterm.lua or windows/vim-ime.ahk.
+# -----------------------------------------------------------------------------
+if [[ "$OS" == linux ]] && grep -qi microsoft /proc/version 2>/dev/null \
+    && command -v cmd.exe >/dev/null && command -v wslpath >/dev/null; then
+  win_env() { (cd /mnt/c && cmd.exe /c "echo %$1%" 2>/dev/null | tr -d '\r'); }
+  win_home="$(wslpath "$(win_env USERPROFILE)")"
+  win_startup="$(wslpath "$(win_env APPDATA)")/Microsoft/Windows/Start Menu/Programs/Startup"
+  cp "$DOTFILES_DIR/wezterm/wezterm.lua" "$win_home/.wezterm.lua"
+  mkdir -p "$win_startup"
+  cp "$DOTFILES_DIR/windows/vim-ime.ahk" "$win_startup/vim-ime.ahk"
 fi
 
 # -----------------------------------------------------------------------------
