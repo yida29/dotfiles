@@ -70,7 +70,8 @@ config.initial_rows = 25
 config.hide_tab_bar_if_only_one_tab = true
 
 -- -----------------------------------------------------------------------------
--- Tabs: Alt+1..8 jump to that tab, Alt+9 to the last one (iTerm2's Cmd+N;
+-- Tabs: Alt+1..8 jump to that tab, Alt+9 to the last one, Alt+T opens one
+-- (iTerm2's Cmd+N / Cmd+T;
 -- Alt sits where Cmd is on a Mac keyboard).
 -- -----------------------------------------------------------------------------
 config.keys = {}
@@ -78,6 +79,8 @@ for i = 1, 8 do
   table.insert(config.keys, { key = tostring(i), mods = "ALT", action = wezterm.action.ActivateTab(i - 1) })
 end
 table.insert(config.keys, { key = "9", mods = "ALT", action = wezterm.action.ActivateTab(-1) })
+-- Alt+T: new tab (iTerm2's Cmd+T), in the same domain as the current pane (WSL).
+table.insert(config.keys, { key = "t", mods = "ALT", action = wezterm.action.SpawnTab("CurrentPaneDomain") })
 
 -- bin/sshs tabs publish sshs_host / sshs_color ("r g b") as user vars;
 -- paint those tabs in the host's color (iTerm2 used OSC 6 tab colors).
