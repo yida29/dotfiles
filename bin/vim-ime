@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 # Launch the vim-ime pad (SKK Japanese-input scratch pad).
-# On Windows/WSL this is what windows/vim-ime.ahk runs inside WezTerm.
+# Run by the iTerm2 "Japanese Input" hotkey profile on macOS.
 exec vim -u "$HOME/.config/vim-ime/vimrc" "$@"

@@ -53,8 +53,7 @@ set noruler
 " Vim print "-- INSERT --" in the command line area.
 set noshowmode
 set noshowcmd
-" WSL's Vim is built without clipboard support (-clipboard); there the
-" pad hands text over via $VIM_IME_COMMIT instead (see s:commit_and_quit).
+" Builds without clipboard support (-clipboard) simply skip this.
 if has('clipboard')
   set clipboard=unnamedplus
 endif
@@ -350,16 +349,9 @@ endfunction
 
 function! s:commit_and_quit() abort
   silent write
-  if !empty($VIM_IME_COMMIT)
-    " Windows/WSL: windows/vim-ime.ahk launched this pad and is waiting for
-    " its window to close; it reads this file and pastes into the previous
-    " window. WSL's Vim has no clipboard, so hand the text over via a file.
-    call writefile(split(getreg(s:commit_reg), "\n", 1), $VIM_IME_COMMIT, 'b')
-  else
-    call system('open -g ' . shellescape(s:commit_url))
-    if v:shell_error
-      throw 'vim-ime: failed to hand off to Hammerspoon'
-    endif
+  call system('open -g ' . shellescape(s:commit_url))
+  if v:shell_error
+    throw 'vim-ime: failed to hand off to Hammerspoon'
   endif
   qa
 endfunction

@@ -48,9 +48,8 @@ iterm2/              iTerm2 preferences plist. iTerm2 reads/writes here
                      via PrefsCustomFolder.
 lazygit/             Lazygit config.
 tmux/                tmux.conf. truecolor is enabled.
-wezterm/, windows/   Windows (WSL) stand-ins for iTerm2 / Hammerspoon:
-                     wezterm.lua and vim-ime.ahk (AutoHotkey v2). install.sh
-                     copies them to the Windows side (not symlinked).
+windows/             Windows-side helper scripts (SSH server setup,
+                     WSL portproxy update).
 install.sh           Run on a fresh host to symlink everything into
                      place + clone needed plugins.
 ```
@@ -60,9 +59,9 @@ install.sh           Run on a fresh host to symlink everything into
 | Feature                 | macOS (`stb`, `home`, `ep`) | Linux (`home2`, `ubuntu`) |
 |-------------------------|----------------------------|--------------------------|
 | Neovim (LazyVim)         | ✅                         | ✅                       |
-| vim-ime GUI hand-off     | ✅                         | ✅ WSL / ❌ others       |
+| vim-ime GUI hand-off     | ✅                         | ❌                       |
 | Hammerspoon / iTerm2     | ✅                         | ❌                       |
-| WezTerm + AutoHotkey     | —                          | ✅ (WSL only)            |
+| Windows Terminal         | —                          | ✅ (WSL only)            |
 
 The registry, not this descriptive table, determines deployment targets.
 Match the current hostname against `local_hostname` / `tailscale_name`,

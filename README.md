@@ -71,29 +71,39 @@ symlinked. SKK learning is per-host; `.skk/userJisyo` is ignored, not shared.
 
 ## Windows (WSL)
 
-WezTerm + AutoHotkey v2 stand in for iTerm2 + Hammerspoon. Install them and
-the font on the Windows side, then run `install.sh` inside WSL (Ubuntu):
+Windows Terminal is the terminal. Its settings (iTerm2 Dark colors,
+JetBrainsMonoNL Nerd Font Mono 14, acrylic, `Alt+1`..`Alt+8` tab jumps,
+`Alt+9` last tab, `Alt+T` new tab) live in Windows Terminal's own
+`settings.json` on the Windows side, not in dotfiles. Install the font
+on the Windows side, then run `install.sh` inside WSL (Ubuntu):
 
 ```powershell
-winget install -e --id wez.wezterm
-winget install -e --id AutoHotkey.AutoHotkey
 winget install -e --id DEVCOM.JetBrainsMonoNerdFont
 ```
 
-`install.sh` copies `wezterm/wezterm.lua` to `%USERPROFILE%\.wezterm.lua`
-and `windows/vim-ime.ahk` into the Startup folder (copies, not symlinks —
-re-run that block after editing either file). WezTerm opens the `Ubuntu`
-WSL distro, where tmux starts fish.
+Windows Terminal opens the `Ubuntu` WSL distro by default, where tmux
+starts fish.
 
-`Alt+J` opens the SKK pad (`bin/vim-ime` in a small WezTerm window). Enter
-commits: Vim writes the text to `$VIM_IME_COMMIT` (WSL's Vim has no
-clipboard) and quits; the AutoHotkey script then refocuses the previous
-window and pastes (Ctrl+Shift+V into WezTerm, Ctrl+V elsewhere).
+The vim-ime SKK pad has no Windows hand-off; the GUI hand-off is macOS
+(Hammerspoon + iTerm2) only.
 
-`sshs` opens one WezTerm tab per host (via `wezterm cli spawn`) instead of
-iTerm2 tabs; tabs are colored from `hosts.json`. `Alt+1`..`Alt+8` jump to
-that tab and `Alt+9` to the last one (iTerm2's `Cmd+N`). Reaching the hosts
-needs Tailscale on Windows and `Host <alias>` entries in `~/.ssh/config`.
+`sshs` opens one tmux window per host; windows are colored from
+`hosts.json`. Reaching the hosts needs Tailscale on Windows and
+`Host <alias>` entries in `~/.ssh/config`.
+
+To accept `ssh` from other hosts (same scheme as `home2`: WSL stays in NAT
+mode, Windows forwards :22 into WSL), inside WSL:
+
+```sh
+sudo apt install -y openssh-server
+echo 'PasswordAuthentication no' | sudo tee /etc/ssh/sshd_config.d/10-keys-only.conf
+sudo systemctl enable --now ssh
+```
+
+then, in an Administrator PowerShell, run `windows/setup-ssh-server.ps1`. It
+installs `C:\Scripts\update-wsl-portproxy.ps1`, registers it as the logon task
+"Update WSL portproxy" (WSL's NAT IP changes every boot), and opens inbound
+TCP 22 from Tailscale addresses only.
 
 ## Offline IME schema
 
